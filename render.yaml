@@ -11,7 +11,7 @@ services:
       export FLASK_APP=wsgi.py
       export FLASK_ENV=production
       export PYTHONPATH=$PYTHONPATH:$(pwd)
-    startCommand: python -m gunicorn wsgi:app --workers 4 --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50 --worker-class gevent
+    startCommand: python -m gunicorn wsgi:app --workers 4 --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50 --worker-class eventlet
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
@@ -40,7 +40,7 @@ services:
       - key: SQLALCHEMY_POOL_RECYCLE
         value: "1800"
       - key: GUNICORN_WORKER_CLASS
-        value: "gevent"
+        value: "eventlet"
       - key: GUNICORN_WORKERS
         value: "4"
       - key: GUNICORN_THREADS
