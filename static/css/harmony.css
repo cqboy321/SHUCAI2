@@ -72,20 +72,55 @@
         align-items: center !important;
     }
     
-    /* 优化每日汇总卡片 */
-    .card .card {
+    /* 优化卡片样式 */
+    .card {
         box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
     }
     
-    /* 增强表格可读性 */
-    .table-sm {
-        font-size: 0.85rem !important;
+    .card .card-header {
+        padding: 8px 12px !important;
+        font-size: 16px !important;
     }
     
-    .table-sm th,
-    .table-sm td {
-        padding: 0.35rem 0.5rem !important;
-        white-space: nowrap !important;
+    /* 表格样式优化 */
+    .table {
+        margin-bottom: 0 !important;
+    }
+    
+    .table th {
+        font-weight: 500 !important;
+        background-color: #f8f9fa !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        padding: 12px 8px !important;
+        text-align: center !important;
+    }
+    
+    .table td {
+        padding: 12px 8px !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+    
+    /* 标签页优化 */
+    .nav-tabs {
+        border-bottom: 1px solid #dee2e6 !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        margin-bottom: -1px !important;
+        padding: 10px 15px !important;
+        color: #6c757d !important;
+    }
+    
+    .nav-tabs .nav-link.active {
+        border-bottom-color: #0d6efd !important;
+        color: #0d6efd !important;
+        font-weight: 500 !important;
     }
 }
 
@@ -132,7 +167,7 @@
     
     /* 优化触摸体验 */
     .btn {
-        min-height: 38px;
+        min-height: 44px;
         font-size: 0.95rem;
     }
     
@@ -176,33 +211,95 @@
         padding: 8px 10px !important;
     }
     
-    /* 移动端每日汇总卡片优化 */
-    .row.g-2 > [class*="col-"] {
-        margin-bottom: 0.5rem !important;
+    /* 移动端主页布局优化 */
+    .container-fluid {
+        padding: 0.5rem !important;
     }
     
-    .card .card {
-        margin-bottom: 0 !important;
+    /* 操作按钮优化 */
+    .card .btn {
+        border-radius: 6px !important;
+        height: 50px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1rem !important;
+        font-weight: 500 !important;
     }
     
-    .card .card .card-body {
-        padding: 0.25rem !important;
+    /* 卡片样式优化 */
+    .card {
+        margin-bottom: 10px !important;
+        border-radius: 8px !important;
     }
     
-    .card .card .table-sm {
-        font-size: 0.8rem !important;
+    .card-header {
+        font-size: 1rem !important;
+        padding: 10px 15px !important;
     }
     
-    .card .card .table-sm th,
-    .card .card .table-sm td {
-        padding: 0.25rem !important;
+    /* 表格样式优化 */
+    .table th {
+        text-align: center !important;
+        font-weight: normal !important;
+        font-size: 0.9rem !important;
+        padding: 10px 5px !important;
     }
     
-    /* 为汇总卡片添加横向滚动 */
-    .card .table-responsive {
-        max-width: calc(100vw - 1.5rem) !important;
-        margin: 0 -0.25rem !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
+    .table td {
+        text-align: center !important;
+        padding: 12px 5px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* 日期选择器和导出按钮 */
+    input[type="date"] {
+        height: 44px !important;
+        padding: 0 10px !important;
+        border-radius: 6px !important;
+    }
+    
+    .bg-secondary {
+        background-color: #6c757d !important;
+    }
+    
+    .bg-secondary .card-body {
+        padding: 10px 15px !important;
+    }
+    
+    .bg-secondary .btn {
+        border-radius: 6px !important;
+        height: 44px !important;
+        background-color: #ffffff !important;
+        color: #0d6efd !important;
+        font-weight: 500 !important;
+    }
+    
+    /* 标签页样式优化 */
+    .nav-tabs {
+        background-color: #ffffff !important;
+        margin-bottom: 5px !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        border: none !important;
+    }
+    
+    .nav-tabs .nav-item {
+        flex: 1 !important;
+    }
+    
+    .nav-tabs .nav-link {
+        text-align: center !important;
+        border-radius: 0 !important;
+        padding: 12px 0 !important;
+        font-size: 0.9rem !important;
+        width: 100% !important;
+    }
+    
+    .tab-content {
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        margin-bottom: 20px !important;
     }
 } 
