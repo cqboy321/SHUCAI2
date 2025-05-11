@@ -20,6 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('mobile-device');
     }
     
+    // 确保导航栏始终固定在顶部
+    const navbar = document.querySelector('.navbar');
+    if (navbar) {
+        // 强制设置导航栏始终固定在顶部
+        navbar.style.position = 'fixed';
+        navbar.style.top = 'env(safe-area-inset-top, 0px)';
+        navbar.style.transform = 'translateY(0)';
+        navbar.style.transition = 'none';
+    }
+    
     // 修复移动端100vh问题
     function setHeight() {
         const vh = window.innerHeight * 0.01;
