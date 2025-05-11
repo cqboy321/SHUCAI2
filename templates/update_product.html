@@ -123,7 +123,7 @@ document.getElementById('type').addEventListener('change', function() {
 function calculateLoss() {
     var quantity = parseInt(document.getElementById('quantity').value) || 0;
     var actualQuantity = parseInt(document.getElementById('actual_quantity').value) || 0;
-    var lossQuantity = Math.max(0, quantity - actualQuantity);
+    var lossQuantity = quantity - actualQuantity;
     document.getElementById('loss_quantity').value = lossQuantity;
 }
 </script>

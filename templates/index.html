@@ -145,14 +145,24 @@
                     <tbody>
                         {% set has_loss = false %}
                         {% for name, data in inventory_data.items() %}
-                            {% if data.loss_quantity > 0 %}
+                            {% if data.loss_quantity != 0 %}
                                 {% set has_loss = true %}
                                 <tr>
                                     <td>{{ name }}</td>
-                                    <td>{{ data.loss_quantity }}</td>
                                     <td>
-                                        {% if data.current_stock > 0 %}
-                                            {{ "%.1f"|format(data.loss_quantity / data.current_stock * 100) }}%
+                                        {% if data.loss_quantity > 0 %}
+                                            {{ data.loss_quantity }}
+                                        {% else %}
+                                            <span class="text-success">{{ data.loss_quantity }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if data.current_stock != 0 %}
+                                            {% if data.loss_quantity > 0 %}
+                                                {{ "%.1f"|format(data.loss_quantity / data.current_stock * 100) }}%
+                                            {% else %}
+                                                <span class="text-success">{{ "%.1f"|format(data.loss_quantity / data.current_stock * 100) }}%</span>
+                                            {% endif %}
                                         {% else %}
                                             -
                                         {% endif %}
@@ -316,7 +326,15 @@
                                     <td>{{ product.name }}</td>
                                     <td>{{ product.quantity }}</td>
                                     <td>{{ product.actual_quantity }}</td>
-                                    <td>{{ product.loss_quantity }}</td>
+                                    <td>
+                                        {% if product.loss_quantity > 0 %}
+                                            <span class="text-danger">{{ product.loss_quantity }}</span>
+                                        {% elif product.loss_quantity < 0 %}
+                                            <span class="text-success">{{ product.loss_quantity }}</span>
+                                        {% else %}
+                                            {{ product.loss_quantity }}
+                                        {% endif %}
+                                    </td>
                                     <td>{{ product.notes }}</td>
                                     <td>
                                         <div class="btn-group">

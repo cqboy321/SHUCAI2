@@ -52,8 +52,8 @@
                                 <td>
                                     <input type="number" name="quantity_{{ vegetable }}" class="form-control" 
                                            value="{{ price_dict[vegetable].quantity if vegetable in price_dict else 0 }}" 
-                                           step="0.01" min="0">
-                                    <small class="form-text text-muted">留空表示不记录此商品</small>
+                                           step="0.01" readonly>
+                                    <small class="form-text text-muted">系统自动计算</small>
                                 </td>
                                 <td>
                                     <input type="number" name="actual_quantity_{{ vegetable }}" class="form-control" 
