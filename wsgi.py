@@ -43,10 +43,6 @@ init_db()
 # 配置应用
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
 app.config['TEMPLATES_AUTO_RELOAD'] = False  # 禁用模板自动重载
-app.config['SQLALCHEMY_POOL_SIZE'] = 20
-app.config['SQLALCHEMY_MAX_OVERFLOW'] = 40
-app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30
-app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800
 
 if __name__ == "__main__":
     app.run() 
