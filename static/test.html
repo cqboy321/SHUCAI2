@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>HarmonyOS Test Page</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="css/harmony.css">
+</head>
+<body>
+  <h1>HarmonyOS 测试页面</h1>
+  <p>如果您看到这个页面，说明静态资源服务正常。</p>
+  <div class="test-area" style="padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+    <p>这个区域用于测试HarmonyOS特有的CSS和JS优化效果。</p>
+  </div>
+  <script src="js/harmony.js"></script>
+  <script>
+    // 检测是否运行在HarmonyOS设备上
+    document.addEventListener('DOMContentLoaded', function() {
+      var isHarmonyOS = /HarmonyOS|EMUI|HUAWEI|HiSilicon/i.test(navigator.userAgent);
+      document.querySelector('.test-area').innerHTML += '<p>当前设备: ' + (isHarmonyOS ? 'HarmonyOS/华为设备' : '非HarmonyOS设备') + '</p>';
+      document.querySelector('.test-area').innerHTML += '<p>用户代理: ' + navigator.userAgent + '</p>';
+    });
+  </script>
+</body>
+</html> 
