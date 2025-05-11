@@ -12,6 +12,9 @@
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
+    // 直接提前初始化菜单处理
+    initMobileMenu();
+    
     // 检测是否是鸿蒙系统
     const isHarmonyOS = /HarmonyOS|EMUI|HUAWEI|HiSilicon/i.test(navigator.userAgent);
     
@@ -28,87 +31,64 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('mobile-device');
     }
     
+    // 初始化移动端菜单
+    function initMobileMenu() {
+        const navbarToggler = document.getElementById('navbarToggler');
+        const navbarMenu = document.getElementById('navbarMenu');
+        
+        if (!navbarToggler || !navbarMenu) {
+            console.log('Menu elements not found yet, retrying in 100ms');
+            setTimeout(initMobileMenu, 100);
+            return;
+        }
+        
+        console.log('Initializing mobile menu');
+        
+        // 确保菜单初始隐藏
+        navbarMenu.style.display = 'none';
+        
+        // 菜单按钮点击事件
+        navbarToggler.onclick = function(e) {
+            console.log('Menu button clicked');
+            if (navbarMenu.style.display === 'none' || navbarMenu.style.display === '') {
+                navbarMenu.style.display = 'block';
+            } else {
+                navbarMenu.style.display = 'none';
+            }
+            
+            // 阻止事件冒泡
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        };
+        
+        // 点击文档其他区域关闭菜单
+        document.addEventListener('click', function(e) {
+            if (navbarMenu.style.display === 'block') {
+                if (!navbarMenu.contains(e.target) && e.target !== navbarToggler) {
+                    navbarMenu.style.display = 'none';
+                }
+            }
+        });
+        
+        // 处理菜单项点击事件
+        const menuLinks = navbarMenu.querySelectorAll('.menu-link');
+        menuLinks.forEach(function(link) {
+            link.addEventListener('click', function() {
+                // 点击后关闭菜单
+                navbarMenu.style.display = 'none';
+            });
+        });
+    }
+    
     // 确保导航栏始终固定在顶部
     const navbar = document.querySelector('.navbar');
     if (navbar) {
-        // 强制设置导航栏始终固定在顶部
         navbar.style.position = 'fixed';
         navbar.style.top = 'env(safe-area-inset-top, 0px)';
         navbar.style.transform = 'translateY(0)';
         navbar.style.transition = 'none';
-        
-        // 处理自定义导航菜单
-        const navbarToggler = document.getElementById('navbarToggler');
-        const navbarMenu = document.getElementById('navbarMenu');
-        
-        if (navbarToggler && navbarMenu && isMobile) {
-            // 确保初始状态下菜单是隐藏的
-            navbarMenu.style.display = 'none';
-            
-            console.log('Custom mobile menu initialized');
-            
-            // 点击菜单按钮时处理菜单显示/隐藏
-            navbarToggler.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                if (navbarMenu.style.display === 'none' || navbarMenu.style.display === '') {
-                    // 显示菜单
-                    navbarMenu.style.display = 'block';
-                    navbarToggler.classList.remove('collapsed');
-                    
-                    // 点击菜单外部区域隐藏菜单
-                    const closeMenu = function(e) {
-                        if (!navbarMenu.contains(e.target) && !navbarToggler.contains(e.target)) {
-                            navbarMenu.style.display = 'none';
-                            navbarToggler.classList.add('collapsed');
-                            document.removeEventListener('click', closeMenu);
-                        }
-                    };
-                    
-                    // 延迟添加点击事件监听
-                    setTimeout(() => {
-                        document.addEventListener('click', closeMenu);
-                    }, 10);
-                } else {
-                    // 隐藏菜单
-                    navbarMenu.style.display = 'none';
-                    navbarToggler.classList.add('collapsed');
-                }
-            });
-            
-            // 处理菜单中的下拉选项
-            const dropdownToggle = navbarMenu.querySelector('.dropdown-toggle');
-            const dropdownMenu = navbarMenu.querySelector('.dropdown-menu');
-            
-            if (dropdownToggle && dropdownMenu) {
-                dropdownToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (dropdownMenu.style.display === 'none' || dropdownMenu.style.display === '') {
-                        dropdownMenu.style.display = 'block';
-                    } else {
-                        dropdownMenu.style.display = 'none';
-                    }
-                });
-            }
-            
-            // 点击菜单项时隐藏菜单
-            const navLinks = navbarMenu.querySelectorAll('.nav-link:not(.dropdown-toggle)');
-            navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    navbarMenu.style.display = 'none';
-                    navbarToggler.classList.add('collapsed');
-                    
-                    // 添加点击反馈
-                    this.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                    setTimeout(() => {
-                        this.style.backgroundColor = '';
-                    }, 200);
-                });
-            });
-        }
+        navbar.style.height = 'var(--navbar-height)';
     }
     
     // 修复移动端100vh问题
