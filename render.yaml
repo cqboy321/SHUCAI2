@@ -7,6 +7,7 @@ services:
       mkdir -p templates static
       cp -r templates/* templates/ || true
       cp -r static/* static/ || true
+      python create_admin.py
     startCommand: python -m gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
