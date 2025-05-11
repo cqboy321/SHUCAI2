@@ -18,3 +18,4 @@ eventlet==0.33.3
 WTForms==3.0.1
 jinja2==3.0.3
 boto3==1.28.65
+requests==2.31.0
