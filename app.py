@@ -1282,6 +1282,124 @@ def admin_backup():
             except Exception as e:
                 flash(f'数据库备份创建失败: {str(e)}', 'danger')
                 return redirect(url_for('admin_backup'))
+
+        elif action == 'restore_sqlite':
+            backup_file = request.form.get('backup_file')
+            if not backup_file:
+                flash('未选择备份文件', 'danger')
+                return redirect(url_for('admin_backup'))
+                
+            if not os.path.exists(backup_file) or not backup_file.startswith('db_backup_') or not backup_file.endswith('.sqlite'):
+                flash('无效的备份文件', 'danger')
+                return redirect(url_for('admin_backup'))
+                
+            try:
+                # 恢复SQLite数据库备份
+                db_path = os.environ.get('DATABASE_URL', 'sqlite:///inventory.db')
+                if db_path.startswith('sqlite:///'):
+                    db_path = db_path[10:]  # 移除 'sqlite:///'
+                
+                # 确保数据库连接已关闭
+                db.session.remove()
+                
+                # 创建当前数据库的备份，以防恢复失败
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                auto_backup_filename = f"auto_backup_before_restore_{timestamp}.sqlite"
+                current_conn = sqlite3.connect(db_path)
+                auto_backup_conn = sqlite3.connect(auto_backup_filename)
+                current_conn.backup(auto_backup_conn)
+                auto_backup_conn.close()
+                current_conn.close()
+                
+                # 恢复备份
+                backup_conn = sqlite3.connect(backup_file)
+                restored_conn = sqlite3.connect(db_path)
+                backup_conn.backup(restored_conn)
+                restored_conn.close()
+                backup_conn.close()
+                
+                log_activity(current_user.id, '恢复数据库备份', f'从文件 {backup_file} 恢复了数据库')
+                flash('数据库恢复成功！应用程序将重新启动以应用更改。', 'success')
+                
+                # 这里应该有一个机制来重启应用，但在本地开发环境中，我们只能请求用户手动重启
+                # 如果在Render上，可以在这里触发重启API
+                
+                return redirect(url_for('admin_backup'))
+            
+            except Exception as e:
+                flash(f'数据库恢复失败: {str(e)}', 'danger')
+                return redirect(url_for('admin_backup'))
+                
+        elif action == 'restore_sql':
+            backup_file = request.form.get('backup_file')
+            if not backup_file:
+                flash('未选择备份文件', 'danger')
+                return redirect(url_for('admin_backup'))
+                
+            if not os.path.exists(backup_file) or not backup_file.startswith('sql_backup_') or not backup_file.endswith('.sql'):
+                flash('无效的备份文件', 'danger')
+                return redirect(url_for('admin_backup'))
+                
+            try:
+                # 执行SQL脚本恢复
+                db_path = os.environ.get('DATABASE_URL', 'sqlite:///inventory.db')
+                if db_path.startswith('sqlite:///'):
+                    db_path = db_path[10:]  # 移除 'sqlite:///'
+                
+                # 确保数据库连接已关闭
+                db.session.remove()
+                
+                # 创建当前数据库的备份，以防恢复失败
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                auto_backup_filename = f"auto_backup_before_restore_{timestamp}.sqlite"
+                current_conn = sqlite3.connect(db_path)
+                auto_backup_conn = sqlite3.connect(auto_backup_filename)
+                current_conn.backup(auto_backup_conn)
+                auto_backup_conn.close()
+                
+                # 读取SQL脚本
+                with open(backup_file, 'r', encoding='utf-8') as sql_file:
+                    sql_script = sql_file.read()
+                
+                # 执行恢复操作
+                cursor = current_conn.cursor()
+                
+                # 备份已有的表数据
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+                tables = cursor.fetchall()
+                
+                # 创建表的备份
+                for table in tables:
+                    table_name = table[0]
+                    cursor.execute(f"CREATE TABLE IF NOT EXISTS backup_{table_name} AS SELECT * FROM {table_name};")
+                
+                # 删除已有数据
+                for table in tables:
+                    table_name = table[0]
+                    cursor.execute(f"DELETE FROM {table_name};")
+                
+                # 执行SQL脚本
+                # 按照语句分割执行
+                sql_statements = sql_script.split(';')
+                for statement in sql_statements:
+                    if statement.strip():
+                        try:
+                            cursor.execute(statement)
+                        except Exception as e:
+                            # 如果某条语句执行失败，记录但继续执行
+                            print(f"Error executing SQL: {statement}")
+                            print(f"Error message: {str(e)}")
+                
+                current_conn.commit()
+                current_conn.close()
+                
+                log_activity(current_user.id, '恢复SQL备份', f'从文件 {backup_file} 恢复了数据库')
+                flash('数据库通过SQL脚本恢复成功！', 'success')
+                return redirect(url_for('admin_backup'))
+            
+            except Exception as e:
+                flash(f'SQL恢复失败: {str(e)}', 'danger')
+                return redirect(url_for('admin_backup'))
     
     return render_template('admin_backup.html', backups=all_backups)
 
