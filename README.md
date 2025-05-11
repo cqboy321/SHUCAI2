@@ -52,3 +52,29 @@
   - 利润 = 销售金额 - (进货价 × 销售数量)
   - 库存数量 = 进货数量 - 销售数量
   - 库存金额 = 库存数量 × 进货价
+
+## 自动备份功能
+
+系统支持通过Render的Cron Jobs实现定期自动备份数据库。默认设置为每天凌晨2点执行备份任务。
+
+### 备份方式
+
+1. **Excel备份**：将数据导出为Excel文件，包含产品、价格、用户等信息。
+2. **SQL备份**：生成包含所有数据的SQL脚本文件。
+3. **S3备份**（可选）：如果配置了AWS S3凭证，可以将备份文件上传到S3存储桶。
+
+### 配置备份
+
+备份功能通过环境变量进行配置：
+
+- `BACKUP_METHODS`: 备份方法，可选"s3,excel,sql"（默认为"excel,sql"）
+- `S3_BACKUP_BUCKET`: AWS S3存储桶名称（仅当使用S3备份时需要）
+- `AWS_ACCESS_KEY_ID`: AWS访问密钥ID（仅当使用S3备份时需要）
+- `AWS_SECRET_ACCESS_KEY`: AWS秘密访问密钥（仅当使用S3备份时需要）
+- `BACKUP_NOTIFICATION_URL`: 备份完成后的通知URL，如企业微信或Slack的Webhook（可选）
+
+配置这些环境变量需要在Render控制台中进行设置。
+
+### 手动触发备份
+
+如需手动触发备份，可以在Render控制台中找到"db-daily-backup"定时任务，然后点击"Run Now"按钮。

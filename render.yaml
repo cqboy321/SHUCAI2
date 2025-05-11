@@ -34,9 +34,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        fromDatabase:
-          name: vegetable-inventory-db
-          property: connectionString
+        value: sqlite:///inventory.db
       - key: FLASK_ENV
         value: production
       - key: FLASK_APP
@@ -57,6 +55,16 @@ services:
         value: "120"
       - key: GUNICORN_KEEPALIVE
         value: "5"
+      - key: BACKUP_METHODS
+        value: "excel,sql" # 备份方法，可选：s3,excel,sql
+      - key: S3_BACKUP_BUCKET
+        sync: false # 如需使用S3备份，请在Render控制台设置此值
+      - key: AWS_ACCESS_KEY_ID
+        sync: false # 如需使用S3备份，请在Render控制台设置此值
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false # 如需使用S3备份，请在Render控制台设置此值
+      - key: BACKUP_NOTIFICATION_URL
+        sync: false # 可选：备份完成后的通知URL，如企业微信或Slack Webhook
       # 移除可能导致SQLite问题的连接池配置
       # 这些配置对SQLite可能无效，导致错误
       #- key: SQLALCHEMY_POOL_SIZE
@@ -71,4 +79,25 @@ services:
 databases:
   - name: vegetable-inventory-db
     databaseName: vegetable_inventory
-    user: vegetable_inventory_user 
+    user: vegetable_inventory_user
+
+# 定时备份作业配置
+cron_jobs:
+  - name: db-daily-backup
+    schedule: "0 2 * * *" # 每天凌晨2点执行
+    command: python render_backup.py
+    envVars:
+      - key: PYTHONPATH
+        value: .
+      - key: BACKUP_METHODS
+        value: "excel,sql" # 备份方法，可选：s3,excel,sql
+      - key: S3_BACKUP_BUCKET
+        sync: false # 从主服务复制
+      - key: AWS_ACCESS_KEY_ID
+        sync: false # 从主服务复制
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false # 从主服务复制
+      - key: BACKUP_NOTIFICATION_URL
+        sync: false # 从主服务复制
+      - key: DATABASE_URL
+        value: sqlite:///inventory.db 
