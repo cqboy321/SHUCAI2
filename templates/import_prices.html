@@ -52,6 +52,8 @@
             </div>
             
             <form method="post" enctype="multipart/form-data" class="mt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="mb-3">
                     <label for="price_file" class="form-label">选择Excel文件</label>
                     <input type="file" class="form-control" id="price_file" name="price_file" accept=".xlsx,.xls" required>
