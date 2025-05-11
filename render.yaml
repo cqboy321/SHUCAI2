@@ -3,17 +3,30 @@ services:
     name: vegetable-inventory
     env: python
     buildCommand: |
+      # 清除缓存文件，确保每次构建都是干净的
+      rm -rf __pycache__ */__pycache__ */*/__pycache__
+      # 升级pip并安装依赖
       pip install --upgrade pip
       pip install -r requirements.txt
-      # Ensure fix_deployment.py is executable (though typically not needed for python scripts)
-      # chmod +x fix_deployment.py 
-      python fix_deployment.py # Run the script to fix wsgi.py
+      # 确保fix_deployment.py可执行
+      python -c "import os; os.chmod('fix_deployment.py', 0o755)" || true
+      # 运行修复脚本
+      python fix_deployment.py
+      # 确保目录存在
       mkdir -p templates static
+      # 复制静态资源和模板
       cp -r templates/* templates/ || true
       cp -r static/* static/ || true
+      # 如果没有favicon.ico，则从vegetable.ico复制
+      if [ ! -f static/favicon.ico ] && [ -f vegetable.ico ]; then
+        cp vegetable.ico static/favicon.ico
+      fi
+      # 设置环境变量
       export FLASK_APP=wsgi.py
       export FLASK_ENV=production
       export PYTHONPATH=$PYTHONPATH:$(pwd)
+      # 清理可能的临时文件
+      find . -name "*.pyc" -delete
     startCommand: python -m gunicorn wsgi:app --workers 2 --threads 4 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50 --worker-class eventlet
     envVars:
       - key: PYTHON_VERSION
@@ -44,14 +57,16 @@ services:
         value: "120"
       - key: GUNICORN_KEEPALIVE
         value: "5"
-      - key: SQLALCHEMY_POOL_SIZE
-        value: "10"
-      - key: SQLALCHEMY_MAX_OVERFLOW
-        value: "20"
-      - key: SQLALCHEMY_POOL_TIMEOUT
-        value: "30"
-      - key: SQLALCHEMY_POOL_RECYCLE
-        value: "1800"
+      # 移除可能导致SQLite问题的连接池配置
+      # 这些配置对SQLite可能无效，导致错误
+      #- key: SQLALCHEMY_POOL_SIZE
+      #  value: "10"
+      #- key: SQLALCHEMY_MAX_OVERFLOW
+      #  value: "20"
+      #- key: SQLALCHEMY_POOL_TIMEOUT
+      #  value: "30"
+      #- key: SQLALCHEMY_POOL_RECYCLE
+      #  value: "1800"
 
 databases:
   - name: vegetable-inventory-db

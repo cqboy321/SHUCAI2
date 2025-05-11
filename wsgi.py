@@ -9,39 +9,47 @@ import eventlet
 # Patch eventlet for better performance
 eventlet.monkey_patch()
 
-# 配置日志
+# Configure logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 添加性能优化中间件
+# Add performance optimization middleware
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 
-# 缓存控制和安全头
+# Cache control optimization
 @app.after_request
 def add_header(response):
-    # 静态资源长缓存
+    # Set long cache for static resources
     if request.path.startswith('/static'):
         response.cache_control.max_age = 31536000
         response.cache_control.public = True
+    # Set no-cache for API and dynamic pages
     else:
         response.cache_control.no_store = True
         response.cache_control.no_cache = True
         response.cache_control.must_revalidate = True
         response.headers['Pragma'] = 'no-cache'
-
-    # 安全头
+    
+    # Add security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-
-    # 不要手动加 gzip header！
+    
+    # 移除有问题的gzip压缩头部，避免鸿蒙系统报错
+    # 让服务器或CDN自行处理压缩，而不是在应用层
+    if 'Content-Encoding' in response.headers:
+        del response.headers['Content-Encoding']
+        
     return response
 
 def init_db():
     try:
         with app.app_context():
+            # Create database tables
             db.create_all()
             logger.info("Database tables created successfully")
+            
+            # Check and create admin account
             admin = User.query.filter_by(role='admin').first()
             if not admin:
                 logger.info("Creating admin user...")
@@ -59,12 +67,12 @@ def init_db():
         logger.error(f"Error during database initialization: {str(e)}")
         raise
 
-# 初始化数据库
+# Initialize the database when the application starts
 init_db()
 
-# 配置应用
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
-app.config['TEMPLATES_AUTO_RELOAD'] = False  # 禁用模板自动重载
+# Configure the application
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year
+app.config['TEMPLATES_AUTO_RELOAD'] = False  # Disable template auto-reload
 
 if __name__ == "__main__":
-    app.run()
+    app.run() 

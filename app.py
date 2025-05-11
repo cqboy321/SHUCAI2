@@ -1004,12 +1004,11 @@ def tencent_verify():
 
 @app.route('/favicon.ico')
 def favicon():
-    response = send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
-    # Add cache headers to improve performance
-    response.headers['Cache-Control'] = 'public, max-age=31536000'
-    response.headers['Expires'] = datetime.now() + timedelta(days=365)
-    return response
+    return send_from_directory(app.static_folder, 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
 
 if __name__ == '__main__':
     with app.app_context():

@@ -10,7 +10,7 @@ import sys
 # File path
 wsgi_path = "wsgi.py"
 
-# New content to ensure request is properly imported
+# New content to ensure request is properly imported and fix Content-Encoding issues
 correct_wsgi_content = """import os
 import sys
 import logging
@@ -48,9 +48,10 @@ def add_header(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     
-    # Enable HTTP compression if supported
-    if 'gzip' in request.headers.get('Accept-Encoding', ''):
-        response.headers['Content-Encoding'] = 'gzip'
+    # 移除有问题的gzip压缩头部，避免鸿蒙系统报错
+    # 让服务器或CDN自行处理压缩，而不是在应用层
+    if 'Content-Encoding' in response.headers:
+        del response.headers['Content-Encoding']
         
     return response
 
@@ -95,12 +96,16 @@ if not os.path.exists(wsgi_path):
     sys.exit(1)
 
 try:
-    # Open the file to check if it has the correct import
+    # Open the file to check if it has the correct import and encoding fix
     with open(wsgi_path, 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
         
-    if 'from flask import request' in content:
-        print(f"The file {wsgi_path} already has the correct import.")
+    # Check if the file already has both fixes
+    has_request_import = 'from flask import request' in content
+    has_encoding_fix = 'del response.headers[\'Content-Encoding\']' in content
+    
+    if has_request_import and has_encoding_fix:
+        print(f"The file {wsgi_path} already has all the necessary fixes.")
     else:
         # Back up the original file
         backup_path = f"{wsgi_path}.bak"
@@ -111,8 +116,20 @@ try:
         # Write the correct content
         with codecs.open(wsgi_path, 'w', encoding='utf-8') as f:
             f.write(correct_wsgi_content)
-        print(f"Fixed {wsgi_path} with correct imports")
+        print(f"Fixed {wsgi_path} with correct imports and Content-Encoding fix")
         
+    # 创建或确保favicon.ico存在
+    favicon_dir = os.path.join("static")
+    favicon_path = os.path.join(favicon_dir, "favicon.ico")
+    
+    if not os.path.exists(favicon_path) and os.path.exists("vegetable.ico"):
+        if not os.path.exists(favicon_dir):
+            os.makedirs(favicon_dir)
+        # 复制vegetable.ico作为favicon.ico
+        with open("vegetable.ico", "rb") as src, open(favicon_path, "wb") as dst:
+            dst.write(src.read())
+        print(f"Created favicon.ico from vegetable.ico")
+    
     print("Deployment fix completed successfully!")
 except Exception as e:
     print(f"Error fixing deployment: {str(e)}")
