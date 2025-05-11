@@ -7,6 +7,9 @@ services:
       mkdir -p templates static
       cp -r templates/* templates/ || true
       cp -r static/* static/ || true
+      export FLASK_APP=wsgi.py
+      export FLASK_ENV=production
+      python -c "from app import db; db.create_all()"
       python create_admin.py
     startCommand: python -m gunicorn wsgi:app
     envVars:
