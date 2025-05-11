@@ -5,9 +5,14 @@
     <div class="card shadow">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h3 class="mb-0">销售价格管理</h3>
-            <a href="{{ url_for('edit_prices') }}" class="btn btn-light">
-                <i class="bi bi-plus-circle"></i> 设置新价格
-            </a>
+            <div>
+                <a href="{{ url_for('import_prices_excel') }}" class="btn btn-light me-2">
+                    <i class="bi bi-file-excel"></i> 导入Excel
+                </a>
+                <a href="{{ url_for('edit_prices') }}" class="btn btn-light">
+                    <i class="bi bi-plus-circle"></i> 设置新价格
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <h4 class="mb-3">当前有效价格</h4>
