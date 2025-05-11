@@ -15,17 +15,32 @@ from functools import lru_cache
 from flask_wtf.csrf import CSRFProtect, CSRFError
 
 # 配置日志
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 # 获取当前文件所在目录的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
+logger.debug(f"Current directory: {current_dir}")
+logger.debug(f"Template folder: {os.path.join(current_dir, 'templates')}")
+logger.debug(f"Static folder: {os.path.join(current_dir, 'static')}")
+
+# 检查模板目录是否存在
+template_dir = os.path.join(current_dir, 'templates')
+if os.path.exists(template_dir):
+    logger.debug(f"Template directory exists: {template_dir}")
+    logger.debug(f"Template files: {os.listdir(template_dir)}")
+else:
+    logger.error(f"Template directory does not exist: {template_dir}")
 
 app = Flask(__name__, 
-    template_folder='templates',
-    static_folder='static'
+    template_folder=template_dir,
+    static_folder=os.path.join(current_dir, 'static')
 )
 
 # 配置应用

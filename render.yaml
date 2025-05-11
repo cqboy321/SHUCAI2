@@ -4,9 +4,9 @@ services:
     env: python
     buildCommand: |
       pip install -r requirements.txt
-      mkdir -p templates
-      cp -r templates/* templates/
-      python -c "from app import db; db.create_all()"
+      mkdir -p templates static
+      cp -r templates/* templates/ || true
+      cp -r static/* static/ || true
     startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
@@ -17,6 +17,16 @@ services:
         fromDatabase:
           name: vegetable-inventory-db
           property: connectionString
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: app.py
+      - key: FLASK_DEBUG
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: LOG_LEVEL
+        value: "DEBUG"
 
 databases:
   - name: vegetable-inventory-db
