@@ -7,26 +7,28 @@
       <h4 class="mb-0">登录</h4>
     </div>
     <div class="card-body">
-      <form method="post">
-        {{ form.hidden_tag() if form.hidden_tag is defined else '' }}
+      <form method="post" action="{{ url_for('login') }}">
+        {{ form.hidden_tag() }}
         <div class="mb-3">
-          <label for="username" class="form-label">用户名</label>
-          {% if form.username is defined %}
-            {{ form.username(class="form-control", id="username") }}
-          {% else %}
-            <input type="text" class="form-control" id="username" name="username" required>
+          <label for="username" class="form-label">{{ form.username.label }}</label>
+          {{ form.username(class="form-control", id="username") }}
+          {% if form.username.errors %}
+            {% for error in form.username.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
           {% endif %}
         </div>
         <div class="mb-3">
-          <label for="password" class="form-label">密码</label>
-          {% if form.password is defined %}
-            {{ form.password(class="form-control", id="password") }}
-          {% else %}
-            <input type="password" class="form-control" id="password" name="password" required>
+          <label for="password" class="form-label">{{ form.password.label }}</label>
+          {{ form.password(class="form-control", id="password") }}
+          {% if form.password.errors %}
+            {% for error in form.password.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
           {% endif %}
         </div>
         <div class="d-flex justify-content-between align-items-center">
-          <button type="submit" class="btn btn-primary">登录</button>
+          {{ form.submit(class="btn btn-primary") }}
           <a href="{{ url_for('register') }}">注册新账号</a>
         </div>
       </form>
