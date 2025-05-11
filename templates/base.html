@@ -392,10 +392,76 @@
                 margin: 0 -0.25rem;
                 width: calc(100% + 0.5rem);
             }
+            
+            /* 移动端下拉菜单优化 - 完全重写 */
+            .dropdown-menu {
+                position: fixed !important;
+                top: calc(var(--navbar-height) + var(--safe-area-inset-top)) !important;
+                right: 5px !important;
+                left: auto !important;
+                min-width: 160px !important;
+                max-width: 70vw !important;
+                z-index: 10000 !important; /* 超高层叠顺序 */
+                transform: none !important;
+                border-radius: 8px !important;
+                box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+                overflow: visible !important;
+                display: none;
+            }
+            
+            .dropdown-menu.show {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            
+            /* 确保菜单项有足够的点击区域 */
+            .dropdown-item {
+                padding: 10px 15px !important;
+                font-size: 0.95rem !important;
+                min-height: 44px !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+            
+            /* 确保Navbar处理正确 */
+            .navbar-collapse {
+                background-color: #0d6efd;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                z-index: 9999;
+                padding: 10px;
+                border-bottom-left-radius: 8px;
+                border-bottom-right-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            
+            /* 确保页面内容不受限制 */
+            .navbar, .main-content, .container-fluid {
+                overflow-x: hidden !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            
+            /* 确保菜单正确关闭 */
+            body.harmony-os .dropdown-menu {
+                max-height: 80vh !important;
+                overflow-y: auto !important;
+            }
         }
         
+        /* 清除溢出限制 */
         .navbar, .main-content, .container-fluid {
             overflow: visible !important;
+        }
+        
+        /* 确保下拉菜单总是可见 */
+        .dropdown-menu.show {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
     </style>
 </head>
