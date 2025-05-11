@@ -44,6 +44,33 @@
     .nav-tabs::-webkit-scrollbar {
         display: none;
     }
+    
+    /* 鸿蒙专用下拉菜单修复 */
+    .dropdown-menu {
+        transform: translateZ(0) !important;
+        -webkit-transform: translateZ(0) !important;
+        will-change: transform, opacity !important;
+        backface-visibility: hidden !important;
+        -webkit-backface-visibility: hidden !important;
+        overflow: visible !important;
+        z-index: 10000 !important;
+    }
+    
+    /* 确保下拉菜单可见性 */
+    .dropdown-menu.show {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    
+    /* 调整下拉菜单项 */
+    .dropdown-item {
+        padding: 10px 15px !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
 }
 
 /* 额外的鸿蒙OS优化 */
@@ -101,5 +128,35 @@
     /* 加速页面渲染 */
     .container-fluid, .table, .card {
         will-change: transform;
+    }
+    
+    /* 鸿蒙系统移动端菜单优化 */
+    .dropdown-menu {
+        position: fixed !important;
+        top: calc(var(--navbar-height) + var(--safe-area-inset-top)) !important;
+        right: 5px !important;
+        left: auto !important;
+        min-width: 160px !important;
+        max-width: 70vw !important;
+        transform: none !important;
+        z-index: 99999 !important; /* 超高层叠顺序 */
+        border-radius: 8px !important;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.3) !important;
+        background-color: white !important;
+        display: none !important;
+        margin: 0 !important;
+        padding: 5px 0 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    .dropdown-menu.show {
+        display: block !important;
+    }
+    
+    /* 移动端按钮修复 */
+    .navbar-toggler {
+        min-height: 44px !important;
+        padding: 8px 10px !important;
     }
 } 
