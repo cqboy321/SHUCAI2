@@ -925,14 +925,16 @@ def import_prices_excel():
             return redirect(url_for('admin_prices'))
         
         if file and ('xlsx' in file.filename or 'xls' in file.filename):
+            # 创建临时文件来保存上传的内容
+            import tempfile
+            import pandas as pd
+            from dateutil.parser import parse
+            
+            temp = None
             try:
-                # 创建临时文件来保存上传的内容
-                import tempfile
-                import pandas as pd
-                from dateutil.parser import parse
-                
                 temp = tempfile.NamedTemporaryFile(delete=False)
                 file.save(temp.name)
+                temp.close()  # 确保文件被关闭，以便在Windows上能够读取
                 
                 # 使用pandas读取Excel数据
                 df = pd.read_excel(temp.name)
@@ -1022,17 +1024,21 @@ def import_prices_excel():
                 # 记录活动
                 log_activity(current_user.id, '导入价格表', f'成功: {success_count}, 跳过: {skipped_count}, 错误: {error_count}')
                 
-                # 删除临时文件
-                temp.close()
-                os.unlink(temp.name)
-                
                 if success_count > 0:
                     flash(f'成功导入 {success_count} 条价格记录，跳过 {skipped_count} 条，{error_count} 条出错。', 'success')
                 else:
                     flash('没有成功导入任何价格记录', 'warning')
                     
             except Exception as e:
+                db.session.rollback()
                 flash(f'处理Excel文件时出错: {str(e)}', 'danger')
+            finally:
+                # 确保无论如何都删除临时文件
+                if temp is not None:
+                    try:
+                        os.unlink(temp.name)
+                    except:
+                        pass
                 
             return redirect(url_for('admin_prices'))
         else:
