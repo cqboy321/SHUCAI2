@@ -627,6 +627,15 @@ def add_user():
             flash('用户名已存在', 'danger')
             return render_template('add_user.html')
         
+        # 添加密码长度验证
+        if len(password) < 6:
+            flash('密码长度必须至少为6个字符', 'danger')
+            return render_template('add_user.html')
+        
+        if len(password) > 120:
+            flash('密码长度不能超过120个字符', 'danger')
+            return render_template('add_user.html')
+        
         user = User(username=username, role=role)
         user.set_password(password)
         db.session.add(user)
@@ -652,7 +661,17 @@ def edit_user(id):
         user.role = request.form['role']
         
         if request.form.get('password'):
-            user.set_password(request.form['password'])
+            password = request.form.get('password')
+            # 添加密码长度验证
+            if len(password) < 6:
+                flash('密码长度必须至少为6个字符', 'danger')
+                return render_template('edit_user.html', user=user)
+            
+            if len(password) > 120:
+                flash('密码长度不能超过120个字符', 'danger')
+                return render_template('edit_user.html', user=user)
+                
+            user.set_password(password)
         
         db.session.commit()
         log_activity(current_user.id, f'编辑用户: {user.username}')
