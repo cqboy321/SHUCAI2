@@ -2,18 +2,21 @@ services:
   - type: web
     name: vegetable-inventory
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app -c gunicorn_config.py
+    buildCommand: |
+      pip install -r requirements.txt
+      python -c "from app import db; db.create_all()"
+    startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        sync: false
-      - key: FLASK_ENV
-        value: production
-      - key: FLASK_APP
-        value: app.py
-      - key: TEMPLATES_AUTO_RELOAD
-        value: "true" 
+        fromDatabase:
+          name: vegetable-inventory-db
+          property: connectionString
+
+databases:
+  - name: vegetable-inventory-db
+    databaseName: vegetable_inventory
+    user: vegetable_inventory_user 

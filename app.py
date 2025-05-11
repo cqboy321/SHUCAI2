@@ -4,6 +4,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
+import sys
+import logging
 import pandas as pd
 from io import BytesIO
 from config import Config
@@ -11,6 +13,10 @@ from dotenv import load_dotenv
 from sqlalchemy import func
 from functools import lru_cache
 from flask_wtf.csrf import CSRFProtect, CSRFError
+
+# 配置日志
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -21,6 +27,8 @@ app = Flask(__name__,
     template_folder=os.path.join(current_dir, 'templates'),
     static_folder=os.path.join(current_dir, 'static')
 )
+
+# 配置应用
 app.config.from_object(Config)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///inventory.db')
@@ -34,15 +42,28 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 # 添加缓存配置
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
 
+# 初始化扩展
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 csrf = CSRFProtect(app)
 
-# 添加CSRF错误处理
+# 添加错误处理
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal Server Error: {str(error)}")
+    db.session.rollback()
+    return render_template('error.html', error="服务器内部错误，请稍后重试"), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    logger.error(f"Not Found Error: {str(error)}")
+    return render_template('error.html', error="页面未找到"), 404
+
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
+    logger.error(f"CSRF Error: {str(e)}")
     flash('表单提交失败，请刷新页面重试', 'danger')
     return redirect(request.referrer or url_for('index'))
 
