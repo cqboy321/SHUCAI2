@@ -1,7 +1,8 @@
 import multiprocessing
+import os
 
 # 绑定的IP和端口
-bind = "127.0.0.1:5000"
+bind = "0.0.0.0:" + str(os.getenv("PORT", "10000"))
 
 # 工作进程数
 workers = multiprocessing.cpu_count() * 2 + 1
