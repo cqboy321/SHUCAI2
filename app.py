@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, send_from_directory, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,6 +13,9 @@ from dotenv import load_dotenv
 from sqlalchemy import func
 from functools import lru_cache
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Length
 
 # 配置日志
 logging.basicConfig(
@@ -59,6 +62,12 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 csrf = CSRFProtect(app)
+
+# 定义表单类
+class LoginForm(FlaskForm):
+    username = StringField('用户名', validators=[DataRequired(), Length(min=2, max=80)])
+    password = PasswordField('密码', validators=[DataRequired(), Length(min=6, max=120)])
+    submit = SubmitField('登录')
 
 # 添加错误处理
 @app.errorhandler(500)
@@ -145,9 +154,11 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
         user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
@@ -155,10 +166,21 @@ def login():
             db.session.commit()
             login_user(user)
             log_activity(user.id, '用户登录')
+            
+            # 获取next参数用于重定向
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
             return redirect(url_for('index'))
+            
         flash('用户名或密码错误', 'danger')
     
-    return render_template('login.html')
+    # 添加响应头防止缓存
+    response = make_response(render_template('login.html', form=form))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -968,6 +990,10 @@ def inventory_check():
         })
     
     return render_template('batch_operation.html', type='inventory_check', price_dict=price_dict, now=datetime.now())
+
+@app.route('/tencent5199302822537009200.txt')
+def tencent_verify():
+    return 'tencent5199302822537009200'
 
 @app.route('/favicon.ico')
 def favicon():
