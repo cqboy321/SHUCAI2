@@ -16,39 +16,32 @@ logger = logging.getLogger(__name__)
 # 添加性能优化中间件
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 
-# 缓存控制优化
+# 缓存控制和安全头
 @app.after_request
 def add_header(response):
-    # 对静态资源设置长缓存
+    # 静态资源长缓存
     if request.path.startswith('/static'):
         response.cache_control.max_age = 31536000
         response.cache_control.public = True
-    # 对API和动态页面设置不缓存
     else:
         response.cache_control.no_store = True
         response.cache_control.no_cache = True
         response.cache_control.must_revalidate = True
         response.headers['Pragma'] = 'no-cache'
-    
-    # 添加安全头
+
+    # 安全头
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    
-    # 启用HTTP压缩
-    if 'gzip' in request.headers.get('Accept-Encoding', ''):
-        response.headers['Content-Encoding'] = 'gzip'
-        
+
+    # 不要手动加 gzip header！
     return response
 
 def init_db():
     try:
         with app.app_context():
-            # 创建数据库表
             db.create_all()
             logger.info("Database tables created successfully")
-            
-            # 检查并创建管理员账户
             admin = User.query.filter_by(role='admin').first()
             if not admin:
                 logger.info("Creating admin user...")
@@ -66,7 +59,7 @@ def init_db():
         logger.error(f"Error during database initialization: {str(e)}")
         raise
 
-# 在应用启动时初始化数据库
+# 初始化数据库
 init_db()
 
 # 配置应用
@@ -74,4 +67,4 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
 app.config['TEMPLATES_AUTO_RELOAD'] = False  # 禁用模板自动重载
 
 if __name__ == "__main__":
-    app.run() 
+    app.run()
