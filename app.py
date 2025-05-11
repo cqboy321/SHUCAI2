@@ -56,6 +56,13 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 # 添加缓存配置
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
 
+# 只有在非SQLite数据库时才添加连接池配置
+if 'sqlite' not in app.config['SQLALCHEMY_DATABASE_URI']:
+    app.config['SQLALCHEMY_POOL_SIZE'] = int(os.getenv('SQLALCHEMY_POOL_SIZE', 10))
+    app.config['SQLALCHEMY_MAX_OVERFLOW'] = int(os.getenv('SQLALCHEMY_MAX_OVERFLOW', 20))
+    app.config['SQLALCHEMY_POOL_TIMEOUT'] = int(os.getenv('SQLALCHEMY_POOL_TIMEOUT', 30))
+    app.config['SQLALCHEMY_POOL_RECYCLE'] = int(os.getenv('SQLALCHEMY_POOL_RECYCLE', 1800))
+
 # 初始化扩展
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -997,8 +1004,12 @@ def tencent_verify():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                             'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    response = send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    # Add cache headers to improve performance
+    response.headers['Cache-Control'] = 'public, max-age=31536000'
+    response.headers['Expires'] = datetime.now() + timedelta(days=365)
+    return response
 
 if __name__ == '__main__':
     with app.app_context():
