@@ -10,7 +10,7 @@ services:
       export FLASK_APP=wsgi.py
       export FLASK_ENV=production
       export PYTHONPATH=$PYTHONPATH:$(pwd)
-    startCommand: python -m gunicorn wsgi:app --workers 4 --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50
+    startCommand: python -m gunicorn wsgi:app --workers 4 --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50 --worker-class gevent
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
@@ -38,6 +38,16 @@ services:
         value: "30"
       - key: SQLALCHEMY_POOL_RECYCLE
         value: "1800"
+      - key: GUNICORN_WORKER_CLASS
+        value: "gevent"
+      - key: GUNICORN_WORKERS
+        value: "4"
+      - key: GUNICORN_THREADS
+        value: "2"
+      - key: GUNICORN_TIMEOUT
+        value: "120"
+      - key: GUNICORN_KEEPALIVE
+        value: "5"
 
 databases:
   - name: vegetable-inventory-db
