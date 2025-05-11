@@ -7,7 +7,6 @@ services:
       mkdir -p templates static
       cp -r templates/* templates/
       cp -r static/* static/
-      python -c "from app import db; db.create_all()"
     startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
@@ -22,6 +21,12 @@ services:
         value: production
       - key: FLASK_APP
         value: app.py
+      - key: FLASK_DEBUG
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: LOG_LEVEL
+        value: "DEBUG"
 
 databases:
   - name: vegetable-inventory-db
