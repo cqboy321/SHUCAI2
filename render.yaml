@@ -2,11 +2,7 @@ services:
   - type: web
     name: vegetable-inventory
     env: python
-    buildCommand: |
-      pip install -r requirements.txt
-      mkdir -p templates static
-      cp -r templates/* templates/ || true
-      cp -r static/* static/ || true
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
@@ -23,12 +19,3 @@ services:
         value: app.py
       - key: FLASK_DEBUG
         value: "0"
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: LOG_LEVEL
-        value: "DEBUG"
-
-databases:
-  - name: vegetable-inventory-db
-    databaseName: vegetable_inventory
-    user: vegetable_inventory_user 
