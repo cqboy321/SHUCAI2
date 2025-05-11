@@ -2,9 +2,7 @@ services:
   - type: web
     name: vegetable-inventory
     env: python
-    buildCommand: |
-      chmod +x deploy.sh
-      ./deploy.sh
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn wsgi:app -c gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION

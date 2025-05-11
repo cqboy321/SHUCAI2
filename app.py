@@ -14,9 +14,12 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 
 load_dotenv()
 
+# 获取当前文件所在目录的绝对路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(__name__, 
-    template_folder='templates',
-    static_folder='static'
+    template_folder=os.path.join(current_dir, 'templates'),
+    static_folder=os.path.join(current_dir, 'static')
 )
 app.config.from_object(Config)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')

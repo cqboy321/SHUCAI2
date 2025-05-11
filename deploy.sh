@@ -4,11 +4,11 @@
 mkdir -p templates static
 
 # 复制模板文件
-cp -r templates/* templates/
+cp -r /opt/render/project/src/templates/* templates/
 
 # 复制静态文件（如果有）
-if [ -d "static" ]; then
-    cp -r static/* static/
+if [ -d "/opt/render/project/src/static" ]; then
+    cp -r /opt/render/project/src/static/* static/
 fi
 
 # 安装依赖
