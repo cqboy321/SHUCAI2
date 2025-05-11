@@ -16,6 +16,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length
+import sqlite3
 
 # 配置日志
 logging.basicConfig(
@@ -1171,6 +1172,166 @@ def favicon():
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
+
+@app.route('/admin/backup', methods=['GET', 'POST'])
+@login_required
+def admin_backup():
+    if not current_user.is_admin():
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('index'))
+    
+    # 获取备份文件列表
+    backup_files = []
+    excel_backups = []
+    sql_backups = []
+    
+    # 查找Excel备份文件
+    for file in os.listdir('.'):
+        if file.startswith('data_backup_') and file.endswith('.xlsx'):
+            file_path = os.path.join('.', file)
+            file_size = os.path.getsize(file_path) / 1024  # KB
+            file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+            excel_backups.append({
+                'name': file,
+                'path': file_path,
+                'size': f"{file_size:.2f} KB",
+                'type': 'Excel备份',
+                'time': file_time
+            })
+    
+    # 查找SQL备份文件
+    for file in os.listdir('.'):
+        if file.startswith('sql_backup_') and file.endswith('.sql'):
+            file_path = os.path.join('.', file)
+            file_size = os.path.getsize(file_path) / 1024  # KB
+            file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+            sql_backups.append({
+                'name': file,
+                'path': file_path,
+                'size': f"{file_size:.2f} KB",
+                'type': 'SQL脚本备份',
+                'time': file_time
+            })
+    
+    # 查找SQLite备份文件
+    for file in os.listdir('.'):
+        if file.startswith('db_backup_') and file.endswith('.sqlite'):
+            file_path = os.path.join('.', file)
+            file_size = os.path.getsize(file_path) / 1024  # KB
+            file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+            backup_files.append({
+                'name': file,
+                'path': file_path,
+                'size': f"{file_size:.2f} KB",
+                'type': 'SQLite数据库',
+                'time': file_time
+            })
+    
+    # 合并并按时间排序
+    all_backups = excel_backups + sql_backups + backup_files
+    all_backups.sort(key=lambda x: x['time'], reverse=True)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create_backup':
+            try:
+                # 生成SQL备份
+                from render_backup import backup_to_sql, export_to_excel
+                
+                backup_success = False
+                if backup_to_sql():
+                    flash('SQL备份创建成功！', 'success')
+                    backup_success = True
+                
+                if export_to_excel():
+                    flash('Excel备份创建成功！', 'success')
+                    backup_success = True
+                
+                if not backup_success:
+                    flash('备份创建失败，请查看日志', 'danger')
+                
+                # 重定向以刷新文件列表
+                return redirect(url_for('admin_backup'))
+            
+            except Exception as e:
+                flash(f'备份创建失败: {str(e)}', 'danger')
+                return redirect(url_for('admin_backup'))
+        
+        elif action == 'backup_sqlite':
+            try:
+                # 创建SQLite数据库的完整备份
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                db_path = os.environ.get('DATABASE_URL', 'sqlite:///inventory.db')
+                if db_path.startswith('sqlite:///'):
+                    db_path = db_path[10:]  # 移除 'sqlite:///'
+                
+                backup_filename = f"db_backup_{timestamp}.sqlite"
+                
+                # 使用SQLite的备份功能
+                conn = sqlite3.connect(db_path)
+                backup_conn = sqlite3.connect(backup_filename)
+                conn.backup(backup_conn)
+                backup_conn.close()
+                conn.close()
+                
+                log_activity(current_user.id, '创建数据库备份', f'创建了SQLite备份: {backup_filename}')
+                flash('数据库备份创建成功！', 'success')
+                return redirect(url_for('admin_backup'))
+            
+            except Exception as e:
+                flash(f'数据库备份创建失败: {str(e)}', 'danger')
+                return redirect(url_for('admin_backup'))
+    
+    return render_template('admin_backup.html', backups=all_backups)
+
+@app.route('/admin/backup/download/<filename>')
+@login_required
+def download_backup(filename):
+    if not current_user.is_admin():
+        flash('您没有权限访问此资源', 'danger')
+        return redirect(url_for('index'))
+    
+    # 安全检查，确保只能下载备份文件
+    if (filename.startswith('db_backup_') and filename.endswith('.sqlite')) or \
+       (filename.startswith('data_backup_') and filename.endswith('.xlsx')) or \
+       (filename.startswith('sql_backup_') and filename.endswith('.sql')):
+        
+        if os.path.exists(filename):
+            log_activity(current_user.id, '下载备份', f'下载了备份文件: {filename}')
+            return send_file(filename, as_attachment=True)
+        else:
+            flash('备份文件不存在', 'danger')
+            return redirect(url_for('admin_backup'))
+    else:
+        flash('无效的备份文件名', 'danger')
+        return redirect(url_for('admin_backup'))
+
+@app.route('/admin/backup/delete/<filename>')
+@login_required
+def delete_backup(filename):
+    if not current_user.is_admin():
+        flash('您没有权限执行此操作', 'danger')
+        return redirect(url_for('index'))
+    
+    # 安全检查，确保只能删除备份文件
+    if (filename.startswith('db_backup_') and filename.endswith('.sqlite')) or \
+       (filename.startswith('data_backup_') and filename.endswith('.xlsx')) or \
+       (filename.startswith('sql_backup_') and filename.endswith('.sql')):
+        
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+                log_activity(current_user.id, '删除备份', f'删除了备份文件: {filename}')
+                flash('备份文件已删除', 'success')
+            except Exception as e:
+                flash(f'删除备份文件失败: {str(e)}', 'danger')
+        else:
+            flash('备份文件不存在', 'danger')
+    else:
+        flash('无效的备份文件名', 'danger')
+    
+    return redirect(url_for('admin_backup'))
 
 if __name__ == '__main__':
     with app.app_context():
