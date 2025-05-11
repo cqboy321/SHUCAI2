@@ -31,14 +31,6 @@ services:
         value: "1"
       - key: LOG_LEVEL
         value: "DEBUG"
-      - key: SQLALCHEMY_POOL_SIZE
-        value: "20"
-      - key: SQLALCHEMY_MAX_OVERFLOW
-        value: "40"
-      - key: SQLALCHEMY_POOL_TIMEOUT
-        value: "30"
-      - key: SQLALCHEMY_POOL_RECYCLE
-        value: "1800"
       - key: GUNICORN_WORKER_CLASS
         value: "eventlet"
       - key: GUNICORN_WORKERS
