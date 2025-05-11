@@ -3,14 +3,42 @@ import sys
 import logging
 from app import app, db, User
 from werkzeug.middleware.proxy_fix import ProxyFix
-from werkzeug.middleware.profiler import ProfilerMiddleware
+import eventlet
+
+# Patch eventlet for better performance
+eventlet.monkey_patch()
 
 # 配置日志
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # 添加性能优化中间件
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
+
+# 缓存控制优化
+@app.after_request
+def add_header(response):
+    # 对静态资源设置长缓存
+    if request.path.startswith('/static'):
+        response.cache_control.max_age = 31536000
+        response.cache_control.public = True
+    # 对API和动态页面设置不缓存
+    else:
+        response.cache_control.no_store = True
+        response.cache_control.no_cache = True
+        response.cache_control.must_revalidate = True
+        response.headers['Pragma'] = 'no-cache'
+    
+    # 添加安全头
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # 启用HTTP压缩
+    if 'gzip' in request.headers.get('Accept-Encoding', ''):
+        response.headers['Content-Encoding'] = 'gzip'
+        
+    return response
 
 def init_db():
     try:
