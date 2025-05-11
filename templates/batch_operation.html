@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">
+                {% if type == 'purchase' %}
+                批量进货
+                {% elif type == 'sale' %}
+                批量销售
+                {% else %}
+                库存盘点
+                {% endif %}
+            </h3>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="date" class="form-label">日期</label>
+                    <input type="date" class="form-control" id="date" name="date" 
+                           value="{{ now.strftime('%Y-%m-%d') }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="notes" class="form-label">备注</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>商品名称</th>
+                                {% if type == 'inventory_check' %}
+                                <th>系统记录数量</th>
+                                <th>实际数量</th>
+                                <th>最近进货价格</th>
+                                {% else %}
+                                <th>数量</th>
+                                <th>价格</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vegetable in ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜'] %}
+                            <tr>
+                                <td>{{ vegetable }}</td>
+                                {% if type == 'inventory_check' %}
+                                <td>
+                                    <input type="number" name="quantity_{{ vegetable }}" class="form-control" 
+                                           value="{{ price_dict[vegetable].quantity if vegetable in price_dict else 0 }}" 
+                                           step="0.01" min="0">
+                                    <small class="form-text text-muted">留空表示不记录此商品</small>
+                                </td>
+                                <td>
+                                    <input type="number" name="actual_quantity_{{ vegetable }}" class="form-control" 
+                                           step="0.01" min="0">
+                                    <small class="form-text text-muted">留空表示不盘点此商品</small>
+                                </td>
+                                <td>
+                                    ¥{{ "%.2f"|format(price_dict[vegetable].price) if vegetable in price_dict else 0 }}
+                                </td>
+                                {% else %}
+                                <td>
+                                    <input type="number" name="quantity_{{ vegetable }}" class="form-control" 
+                                           step="0.01" min="0" placeholder="输入数量">
+                                    <small class="form-text text-muted">留空表示不{{ '销售' if type == 'sale' else '进货' }}此商品</small>
+                                </td>
+                                <td>
+                                    {% if type == 'sale' %}
+                                    ¥{{ "%.2f"|format(price_dict[vegetable].sale_price) if vegetable in price_dict else 0 }}
+                                    {% else %}
+                                    <input type="number" name="price_{{ vegetable }}" class="form-control" 
+                                           value="{{ price_dict[vegetable].purchase_price if vegetable in price_dict else 0 }}" 
+                                           step="0.01" min="0">
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

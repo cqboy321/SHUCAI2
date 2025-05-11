@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0"><i class="bi bi-pencil"></i> 更新记录</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="name" class="form-label">商品名称</label>
+                            <select class="form-select" id="name" name="name" required>
+                                <option value="空心菜" {% if product.name == '空心菜' %}selected{% endif %}>空心菜</option>
+                                <option value="水白菜" {% if product.name == '水白菜' %}selected{% endif %}>水白菜</option>
+                                <option value="水萝卜" {% if product.name == '水萝卜' %}selected{% endif %}>水萝卜</option>
+                                <option value="油麦菜" {% if product.name == '油麦菜' %}selected{% endif %}>油麦菜</option>
+                                <option value="菜心" {% if product.name == '菜心' %}selected{% endif %}>菜心</option>
+                                <option value="塔菜" {% if product.name == '塔菜' %}selected{% endif %}>塔菜</option>
+                                <option value="白萝卜" {% if product.name == '白萝卜' %}selected{% endif %}>白萝卜</option>
+                                <option value="快白菜" {% if product.name == '快白菜' %}selected{% endif %}>快白菜</option>
+                                <option value="小白菜" {% if product.name == '小白菜' %}selected{% endif %}>小白菜</option>
+                                <option value="大白菜" {% if product.name == '大白菜' %}selected{% endif %}>大白菜</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="type" class="form-label">类型</label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="purchase" {% if product.type == 'purchase' %}selected{% endif %}>进货</option>
+                                <option value="sale" {% if product.type == 'sale' %}selected{% endif %}>销售</option>
+                                <option value="inventory_check" {% if product.type == 'inventory_check' %}selected{% endif %}>盘点</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="price" class="form-label">价格</label>
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" step="0.01" class="form-control" id="price" name="price" value="{{ product.price }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="quantity" class="form-label" id="quantity_label">数量</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" value="{{ product.quantity }}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="inventory_check_fields" style="display: {% if product.type == 'inventory_check' %}flex{% else %}none{% endif %}">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="actual_quantity" class="form-label">实际数量</label>
+                            <input type="number" class="form-control" id="actual_quantity" name="actual_quantity" value="{{ product.actual_quantity }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="loss_quantity" class="form-label">亏损数量</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-exclamation-triangle"></i></span>
+                                <input type="number" class="form-control" id="loss_quantity" name="loss_quantity" value="{{ product.loss_quantity }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="date" class="form-label">日期</label>
+                            <input type="date" class="form-control" id="date" name="date" value="{{ product.date.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="notes" class="form-label">备注</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="1">{{ product.notes }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save"></i> 保存更改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('type').addEventListener('change', function() {
+    var inventoryCheckFields = document.getElementById('inventory_check_fields');
+    var quantityLabel = document.getElementById('quantity_label');
+    var quantityInput = document.getElementById('quantity');
+    var actualQuantityInput = document.getElementById('actual_quantity');
+    var lossQuantityInput = document.getElementById('loss_quantity');
+    
+    if (this.value === 'inventory_check') {
+        inventoryCheckFields.style.display = 'flex';
+        quantityLabel.textContent = '盘点数量';
+        actualQuantityInput.addEventListener('input', calculateLoss);
+        quantityInput.addEventListener('input', calculateLoss);
+    } else {
+        inventoryCheckFields.style.display = 'none';
+        quantityLabel.textContent = '数量';
+        actualQuantityInput.removeEventListener('input', calculateLoss);
+        quantityInput.removeEventListener('input', calculateLoss);
+    }
+});
+
+function calculateLoss() {
+    var quantity = parseInt(document.getElementById('quantity').value) || 0;
+    var actualQuantity = parseInt(document.getElementById('actual_quantity').value) || 0;
+    var lossQuantity = Math.max(0, quantity - actualQuantity);
+    document.getElementById('loss_quantity').value = lossQuantity;
+}
+</script>
+{% endblock %} 

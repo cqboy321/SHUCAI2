@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">销售价格管理</h3>
+            <a href="{{ url_for('edit_prices') }}" class="btn btn-light">
+                <i class="bi bi-plus-circle"></i> 设置新价格
+            </a>
+        </div>
+        <div class="card-body">
+            <h4 class="mb-3">当前有效价格</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>商品名称</th>
+                            <th>销售价格</th>
+                            <th>开始日期</th>
+                            <th>结束日期</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for price in current_prices %}
+                        <tr>
+                            <td>{{ price.name }}</td>
+                            <td>¥{{ "%.2f"|format(price.sale_price) }}</td>
+                            <td>{{ price.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ price.end_date.strftime('%Y-%m-%d') if price.end_date else '永久有效' }}</td>
+                            <td>
+                                {% if price.start_date <= now and (not price.end_date or price.end_date > now) %}
+                                <span class="badge bg-success">当前有效</span>
+                                {% elif price.start_date > now %}
+                                <span class="badge bg-warning">即将生效</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if historical_prices %}
+            <h4 class="mb-3 mt-4">历史价格记录</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>商品名称</th>
+                            <th>销售价格</th>
+                            <th>开始日期</th>
+                            <th>结束日期</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for price in historical_prices %}
+                        <tr>
+                            <td>{{ price.name }}</td>
+                            <td>¥{{ "%.2f"|format(price.sale_price) }}</td>
+                            <td>{{ price.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ price.end_date.strftime('%Y-%m-%d') if price.end_date else '永久有效' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
