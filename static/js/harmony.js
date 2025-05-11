@@ -163,4 +163,95 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.backgroundColor = '';
         });
     });
+    
+    // ===== 新增：汇总卡片优化 =====
+    
+    // 优化汇总卡片表格显示
+    function enhanceSummaryCards() {
+        // 检查是否有数据，没有数据则显示提示
+        document.querySelectorAll('.card .card .table-sm tbody').forEach(tableBody => {
+            if (tableBody.children.length === 0) {
+                const noDataRow = document.createElement('tr');
+                const noDataCell = document.createElement('td');
+                noDataCell.setAttribute('colspan', '3');
+                noDataCell.className = 'text-center text-muted';
+                noDataCell.textContent = '暂无数据';
+                noDataRow.appendChild(noDataCell);
+                tableBody.appendChild(noDataRow);
+            }
+        });
+        
+        // 确保表格适应容器宽度
+        document.querySelectorAll('.card .card .table-responsive').forEach(tableContainer => {
+            const table = tableContainer.querySelector('table');
+            if (table) {
+                // 确保表格列宽适当
+                const headerCells = table.querySelectorAll('th');
+                if (headerCells.length > 0) {
+                    // 设置平均宽度
+                    const width = 100 / headerCells.length;
+                    headerCells.forEach(cell => {
+                        cell.style.width = `${width}%`;
+                    });
+                }
+            }
+        });
+        
+        // 在移动设备上添加横向滚动提示
+        if (window.innerWidth < 769) {
+            document.querySelectorAll('.card .card .table-responsive').forEach(container => {
+                if (container.scrollWidth > container.clientWidth) {
+                    // 如果表格超出容器宽度，添加视觉提示
+                    container.classList.add('has-scroll');
+                    
+                    // 添加滑动手势监听
+                    container.addEventListener('touchstart', function(e) {
+                        this.dataset.touchStartX = e.touches[0].clientX;
+                    }, { passive: true });
+                    
+                    container.addEventListener('touchmove', function(e) {
+                        if (this.dataset.touchStartX) {
+                            const moveX = e.touches[0].clientX - this.dataset.touchStartX;
+                            if (Math.abs(moveX) > 10) {
+                                e.stopPropagation();
+                            }
+                        }
+                    }, { passive: true });
+                }
+            });
+        }
+    }
+    
+    // 初始化汇总卡片优化
+    setTimeout(enhanceSummaryCards, 100);
+    
+    // 添加日期选择器优化
+    const dateInput = document.getElementById('date');
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            // 显示加载中提示
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-white bg-opacity-75';
+            loadingOverlay.style.zIndex = '9999';
+            
+            const spinner = document.createElement('div');
+            spinner.className = 'spinner-border text-primary';
+            spinner.setAttribute('role', 'status');
+            
+            const spinnerText = document.createElement('span');
+            spinnerText.className = 'ms-2';
+            spinnerText.textContent = '数据加载中...';
+            
+            const spinnerContainer = document.createElement('div');
+            spinnerContainer.className = 'd-flex align-items-center';
+            spinnerContainer.appendChild(spinner);
+            spinnerContainer.appendChild(spinnerText);
+            
+            loadingOverlay.appendChild(spinnerContainer);
+            document.body.appendChild(loadingOverlay);
+            
+            // 提交表单
+            this.form.submit();
+        });
+    }
 }); 
