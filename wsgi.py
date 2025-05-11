@@ -2,10 +2,15 @@ import os
 import sys
 import logging
 from app import app, db, User
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.middleware.profiler import ProfilerMiddleware
 
 # 配置日志
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# 添加性能优化中间件
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 def init_db():
     try:
@@ -34,6 +39,14 @@ def init_db():
 
 # 在应用启动时初始化数据库
 init_db()
+
+# 配置应用
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
+app.config['TEMPLATES_AUTO_RELOAD'] = False  # 禁用模板自动重载
+app.config['SQLALCHEMY_POOL_SIZE'] = 20
+app.config['SQLALCHEMY_MAX_OVERFLOW'] = 40
+app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30
+app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800
 
 if __name__ == "__main__":
     app.run() 

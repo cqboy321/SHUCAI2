@@ -10,7 +10,7 @@ services:
       export FLASK_APP=wsgi.py
       export FLASK_ENV=production
       export PYTHONPATH=$PYTHONPATH:$(pwd)
-    startCommand: python -m gunicorn wsgi:app
+    startCommand: python -m gunicorn wsgi:app --workers 4 --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
@@ -30,6 +30,14 @@ services:
         value: "1"
       - key: LOG_LEVEL
         value: "DEBUG"
+      - key: SQLALCHEMY_POOL_SIZE
+        value: "20"
+      - key: SQLALCHEMY_MAX_OVERFLOW
+        value: "40"
+      - key: SQLALCHEMY_POOL_TIMEOUT
+        value: "30"
+      - key: SQLALCHEMY_POOL_RECYCLE
+        value: "1800"
 
 databases:
   - name: vegetable-inventory-db
