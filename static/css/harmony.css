@@ -1,0 +1,105 @@
+/* 
+ * HarmonyOS Specific Optimizations
+ * 针对华为鸿蒙系统的优化
+ */
+
+/* 安全区域适配 */
+:root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/* 华为/鸿蒙系统专用优化 */
+@supports (-webkit-touch-callout: none) or (-webkit-appearance: none) {
+    body {
+        height: auto !important;
+        min-height: 100% !important;
+        overflow: auto !important;
+    }
+    
+    /* 修复视觉效果 */
+    .navbar {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    
+    /* 增强触摸体验 */
+    a, button, .btn, input[type="submit"], .nav-link {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        min-height: 44px;
+    }
+    
+    /* 修复滚动和弹性行为 */
+    .table-responsive, .nav-tabs {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    
+    .table-responsive::-webkit-scrollbar, 
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* 额外的鸿蒙OS优化 */
+@supports ((-moz-appearance:none) and (display:contents)) or (-webkit-touch-callout: none) {
+    /* 修复布局问题 */
+    .main-content {
+        height: auto !important;
+        min-height: calc(100% - var(--navbar-height) - var(--safe-area-inset-top) - var(--safe-area-inset-bottom)) !important;
+        flex: 1 0 auto;
+    }
+    
+    /* 防止底部空白 */
+    html {
+        height: -webkit-fill-available;
+    }
+    
+    body {
+        min-height: -webkit-fill-available;
+        padding-bottom: calc(var(--safe-area-inset-bottom) + 10px);
+    }
+}
+
+/* 解决页面底部大量空白问题 */
+.card-container {
+    height: auto !important;
+    max-height: none !important;
+    page-break-inside: avoid;
+}
+
+/* 修复表格显示 */
+.table tr {
+    height: auto !important;
+    max-height: none !important;
+}
+
+/* 增强移动设备性能 */
+@media (max-width: 768px) {
+    /* 减小资源占用 */
+    img, svg {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    /* 优化触摸体验 */
+    .btn {
+        min-height: 38px;
+        font-size: 0.95rem;
+    }
+    
+    /* 加速过渡效果 */
+    * {
+        transition-duration: 0.15s !important;
+    }
+    
+    /* 加速页面渲染 */
+    .container-fluid, .table, .card {
+        will-change: transform;
+    }
+} 
