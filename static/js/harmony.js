@@ -12,6 +12,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('harmony-os');
     }
     
+    // 检测是否是移动设备
+    const isMobile = window.innerWidth < 769 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        document.documentElement.classList.add('mobile-device');
+        document.body.classList.add('mobile-device');
+    }
+    
     // 修复移动端100vh问题
     function setHeight() {
         const vh = window.innerHeight * 0.01;
@@ -31,21 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, { passive: true });
     });
-    
-    // 延迟加载非关键资源
-    function lazyLoadResources() {
-        // 预加载图片
-        const images = document.querySelectorAll('img[data-src]');
-        images.forEach(img => {
-            if (img.dataset.src) {
-                img.src = img.dataset.src;
-                img.removeAttribute('data-src');
-            }
-        });
-    }
-    
-    // 页面完全加载后执行
-    window.addEventListener('load', lazyLoadResources);
     
     // 优化表单提交，防止重复提交
     const forms = document.querySelectorAll('form');
@@ -72,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('offline');
     });
     
-    // ===== 新增：下拉菜单交互增强 =====
+    // ===== 导航和交互优化 =====
     
     // 修复下拉菜单在鸿蒙系统中的显示问题
     function enhanceDropdowns() {
@@ -96,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 dropdownMenu.style.visibility = 'visible';
                 
                 // 固定菜单位置（在移动设备上）
-                if (window.innerWidth < 769) {
+                if (isMobile) {
                     dropdownMenu.style.position = 'fixed';
                     
                     // 计算正确的顶部位置
@@ -150,84 +143,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 初始化下拉菜单增强
-    enhanceDropdowns();
-
     // 添加视觉反馈
-    document.querySelectorAll('.dropdown-item').forEach(item => {
+    document.querySelectorAll('.dropdown-item, .btn').forEach(item => {
         item.addEventListener('touchstart', function() {
-            this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+            this.style.opacity = '0.7';
         });
         
         item.addEventListener('touchend', function() {
-            this.style.backgroundColor = '';
+            this.style.opacity = '';
         });
     });
     
-    // ===== 新增：汇总卡片优化 =====
-    
-    // 优化汇总卡片表格显示
-    function enhanceSummaryCards() {
-        // 检查是否有数据，没有数据则显示提示
-        document.querySelectorAll('.card .card .table-sm tbody').forEach(tableBody => {
-            if (tableBody.children.length === 0) {
-                const noDataRow = document.createElement('tr');
-                const noDataCell = document.createElement('td');
-                noDataCell.setAttribute('colspan', '3');
-                noDataCell.className = 'text-center text-muted';
-                noDataCell.textContent = '暂无数据';
-                noDataRow.appendChild(noDataCell);
-                tableBody.appendChild(noDataRow);
-            }
-        });
-        
-        // 确保表格适应容器宽度
-        document.querySelectorAll('.card .card .table-responsive').forEach(tableContainer => {
-            const table = tableContainer.querySelector('table');
-            if (table) {
-                // 确保表格列宽适当
-                const headerCells = table.querySelectorAll('th');
-                if (headerCells.length > 0) {
-                    // 设置平均宽度
-                    const width = 100 / headerCells.length;
-                    headerCells.forEach(cell => {
-                        cell.style.width = `${width}%`;
-                    });
-                }
-            }
-        });
-        
-        // 在移动设备上添加横向滚动提示
-        if (window.innerWidth < 769) {
-            document.querySelectorAll('.card .card .table-responsive').forEach(container => {
-                if (container.scrollWidth > container.clientWidth) {
-                    // 如果表格超出容器宽度，添加视觉提示
-                    container.classList.add('has-scroll');
-                    
-                    // 添加滑动手势监听
-                    container.addEventListener('touchstart', function(e) {
-                        this.dataset.touchStartX = e.touches[0].clientX;
-                    }, { passive: true });
-                    
-                    container.addEventListener('touchmove', function(e) {
-                        if (this.dataset.touchStartX) {
-                            const moveX = e.touches[0].clientX - this.dataset.touchStartX;
-                            if (Math.abs(moveX) > 10) {
-                                e.stopPropagation();
-                            }
-                        }
-                    }, { passive: true });
-                }
-            });
-        }
-    }
-    
-    // 初始化汇总卡片优化
-    setTimeout(enhanceSummaryCards, 100);
-    
-    // 添加日期选择器优化
+    // 日期选择器优化
     const dateInput = document.getElementById('date');
     if (dateInput) {
+        // 添加移动端日期选择优化
+        if (isMobile) {
+            dateInput.classList.add('mobile-date-input');
+        }
+        
         dateInput.addEventListener('change', function() {
             // 显示加载中提示
             const loadingOverlay = document.createElement('div');
@@ -254,4 +188,76 @@ document.addEventListener('DOMContentLoaded', function() {
             this.form.submit();
         });
     }
+    
+    // 优化表格显示
+    function enhanceTablesDisplay() {
+        // 检查是否有空表格，添加"暂无数据"提示
+        document.querySelectorAll('table tbody').forEach(tbody => {
+            // 如果没有数据行或只有空行
+            if (tbody.children.length === 0 || 
+                (tbody.children.length === 1 && tbody.children[0].innerText.trim() === '')) {
+                
+                const noDataRow = document.createElement('tr');
+                const noDataCell = document.createElement('td');
+                const colspan = tbody.parentElement.querySelector('thead tr th').length || 3;
+                
+                noDataCell.setAttribute('colspan', colspan);
+                noDataCell.className = 'text-center text-muted py-4';
+                noDataCell.textContent = '暂无数据';
+                
+                noDataRow.appendChild(noDataCell);
+                tbody.innerHTML = '';
+                tbody.appendChild(noDataRow);
+            }
+        });
+        
+        // 确保表格内容格式一致
+        document.querySelectorAll('table td, table th').forEach(cell => {
+            // 为价格和金额添加样式
+            if (cell.textContent.includes('¥') || /^\d+\.\d{2}$/.test(cell.textContent.trim())) {
+                cell.classList.add('text-end');
+            }
+            
+            // 为数字添加样式
+            if (/^\d+(\.\d+)?$/.test(cell.textContent.trim()) && !cell.textContent.includes('¥')) {
+                cell.classList.add('text-center');
+            }
+        });
+    }
+    
+    // 初始化各种增强
+    enhanceDropdowns();
+    
+    // 页面加载完成后再执行一些优化
+    window.addEventListener('load', function() {
+        enhanceTablesDisplay();
+        
+        // 在移动设备上优化输入体验
+        if (isMobile) {
+            // 输入框获得焦点时，确保不被键盘遮挡
+            document.querySelectorAll('input, select, textarea').forEach(input => {
+                input.addEventListener('focus', function() {
+                    // 等待键盘弹出
+                    setTimeout(() => {
+                        // 滚动到视图中
+                        this.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }, 300);
+                });
+            });
+            
+            // 标签页切换增强
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // 添加点击反馈
+                    this.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+                    setTimeout(() => {
+                        this.style.backgroundColor = '';
+                    }, 200);
+                });
+            });
+        }
+    });
 }); 
