@@ -68,6 +68,10 @@
             will-change: transform;
         }
         
+        .navbar .container-fluid {
+            padding: 0;
+        }
+        
         .navbar-brand {
             font-size: 1.1rem;
             font-weight: bold;
@@ -75,6 +79,16 @@
             overflow: hidden;
             text-overflow: ellipsis;
             color: #fff !important;
+            margin-right: 1rem;
+        }
+        
+        .navbar-toggler {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.15rem rgba(255,255,255,0.25);
         }
         
         .nav-link {
@@ -360,6 +374,73 @@
                 width: 100% !important;
                 z-index: 1050 !important;
                 transform: translateY(0) !important;
+                min-height: 56px !important;
+            }
+            
+            /* 菜单展开时的样式改进 */
+            .navbar-collapse {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background-color: #0d6efd;
+                padding: 0.5rem;
+                z-index: 1040;
+                border-bottom-left-radius: 8px;
+                border-bottom-right-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                max-height: calc(85vh - var(--navbar-height) - var(--safe-area-inset-top));
+                overflow-y: auto;
+                margin-top: 0;
+            }
+            
+            .navbar-nav {
+                padding: 0.5rem 0;
+                width: 100%;
+            }
+            
+            .navbar-nav .nav-item {
+                width: 100%;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.75rem 1rem !important;
+                border-radius: 6px;
+                margin: 2px 0;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                min-height: 44px;
+            }
+            
+            .navbar-nav .nav-link:active,
+            .navbar-nav .nav-link:focus {
+                background-color: rgba(255,255,255,0.1);
+            }
+            
+            .dropdown-menu {
+                position: static !important;
+                float: none;
+                width: 100%;
+                background-color: rgba(255,255,255,0.1);
+                border: none;
+                border-radius: 6px;
+                margin-top: 0;
+                margin-bottom: 0.5rem;
+                box-shadow: none !important;
+                padding: 0.25rem;
+            }
+            
+            .dropdown-item {
+                color: rgba(255,255,255,0.9) !important;
+                padding: 0.75rem 1rem !important;
+                border-radius: 6px;
+            }
+            
+            .dropdown-item:hover,
+            .dropdown-item:focus {
+                background-color: rgba(255,255,255,0.1);
+                color: #fff !important;
             }
             
             .card {
@@ -481,10 +562,12 @@
     {% if current_user.is_authenticated %}
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">蔬菜批发库存管理</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <div class="d-flex align-items-center justify-content-between w-100">
+                <a class="navbar-brand" href="{{ url_for('index') }}">蔬菜批发库存管理</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
