@@ -906,6 +906,142 @@ def get_current_price(vegetable_name):
     ).order_by(ProductPrice.start_date.desc()).first()
     return price
 
+@app.route('/admin/prices/import_excel', methods=['GET', 'POST'])
+@login_required
+def import_prices_excel():
+    if not current_user.is_admin():
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        # 检查是否有文件上传
+        if 'price_file' not in request.files:
+            flash('没有选择文件', 'danger')
+            return redirect(url_for('admin_prices'))
+        
+        file = request.files['price_file']
+        if file.filename == '':
+            flash('没有选择文件', 'danger')
+            return redirect(url_for('admin_prices'))
+        
+        if file and ('xlsx' in file.filename or 'xls' in file.filename):
+            try:
+                # 创建临时文件来保存上传的内容
+                import tempfile
+                import pandas as pd
+                from dateutil.parser import parse
+                
+                temp = tempfile.NamedTemporaryFile(delete=False)
+                file.save(temp.name)
+                
+                # 使用pandas读取Excel数据
+                df = pd.read_excel(temp.name)
+                
+                # 必要的列：商品名称、销售价格、开始日期、结束日期(可选)
+                required_columns = ['商品名称', '销售价格', '开始日期']
+                
+                # 检查是否包含必要的列
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                if missing_columns:
+                    flash(f'Excel文件缺少必要的列: {", ".join(missing_columns)}', 'danger')
+                    return redirect(url_for('admin_prices'))
+                
+                # 计数器来跟踪导入的条目
+                success_count = 0
+                error_count = 0
+                skipped_count = 0
+                
+                # 蔬菜列表检查
+                valid_vegetables = ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']
+                
+                # 处理数据
+                for index, row in df.iterrows():
+                    vegetable_name = str(row['商品名称']).strip()
+                    
+                    # 跳过不在系统中的蔬菜
+                    if vegetable_name not in valid_vegetables:
+                        skipped_count += 1
+                        continue
+                    
+                    try:
+                        # 提取价格
+                        sale_price = float(row['销售价格'])
+                        
+                        # 处理日期 - 开始日期是必需的
+                        try:
+                            start_date = pd.to_datetime(row['开始日期']).to_pydatetime()
+                        except:
+                            # 尝试使用dateutil进行更灵活的解析
+                            start_date = parse(str(row['开始日期']))
+                        
+                        # 结束日期是可选的
+                        end_date = None
+                        if '结束日期' in df.columns and pd.notna(row['结束日期']):
+                            try:
+                                end_date = pd.to_datetime(row['结束日期']).to_pydatetime()
+                            except:
+                                try:
+                                    end_date = parse(str(row['结束日期']))
+                                except:
+                                    # 如果无法解析结束日期，则设为None
+                                    end_date = None
+                        
+                        # 价格有效性检查
+                        if sale_price <= 0:
+                            error_count += 1
+                            continue
+                            
+                        # 检查是否有重叠的时间段
+                        existing_price = ProductPrice.query.filter(
+                            ProductPrice.name == vegetable_name,
+                            ProductPrice.start_date <= start_date,
+                            (ProductPrice.end_date == None) | (ProductPrice.end_date >= start_date)
+                        ).first()
+                        
+                        if existing_price:
+                            skipped_count += 1
+                            continue
+                        
+                        # 创建新的价格记录
+                        price = ProductPrice(
+                            name=vegetable_name,
+                            sale_price=sale_price,
+                            start_date=start_date,
+                            end_date=end_date
+                        )
+                        db.session.add(price)
+                        success_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        continue
+                
+                # 提交所有更改
+                db.session.commit()
+                
+                # 记录活动
+                log_activity(current_user.id, '导入价格表', f'成功: {success_count}, 跳过: {skipped_count}, 错误: {error_count}')
+                
+                # 删除临时文件
+                temp.close()
+                os.unlink(temp.name)
+                
+                if success_count > 0:
+                    flash(f'成功导入 {success_count} 条价格记录，跳过 {skipped_count} 条，{error_count} 条出错。', 'success')
+                else:
+                    flash('没有成功导入任何价格记录', 'warning')
+                    
+            except Exception as e:
+                flash(f'处理Excel文件时出错: {str(e)}', 'danger')
+                
+            return redirect(url_for('admin_prices'))
+        else:
+            flash('仅支持上传Excel文件(.xlsx 或 .xls)', 'danger')
+            return redirect(url_for('admin_prices'))
+            
+    # GET请求 - 显示上传表单
+    return render_template('import_prices.html')
+
 @app.route('/batch/inventory_check', methods=['GET', 'POST'])
 @login_required
 def inventory_check():
