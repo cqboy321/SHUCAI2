@@ -4,14 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>蔬菜批发库存管理系统</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" as="script">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" as="style">
+    
+    <!-- 内联关键CSS -->
     <style>
+        /* 基础样式 */
         :root {
             --safe-area-inset-top: env(safe-area-inset-top, 0px);
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
             --safe-area-inset-left: env(safe-area-inset-left, 0px);
             --safe-area-inset-right: env(safe-area-inset-right, 0px);
+            --navbar-height: 56px;
+            --content-padding: 0.5rem;
         }
         
         html {
@@ -20,6 +27,7 @@
             overflow-x: hidden;
             -webkit-text-size-adjust: 100%;
             -webkit-tap-highlight-color: transparent;
+            font-size: 16px;
         }
         
         body {
@@ -28,7 +36,7 @@
             width: 100%;
             margin: 0;
             padding: 0;
-            padding-top: var(--safe-area-inset-top);
+            padding-top: calc(var(--navbar-height) + var(--safe-area-inset-top));
             padding-bottom: var(--safe-area-inset-bottom);
             padding-left: var(--safe-area-inset-left);
             padding-right: var(--safe-area-inset-right);
@@ -37,16 +45,28 @@
             background-color: #f8f9fa;
             display: flex;
             flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
         }
         
+        body.loaded {
+            opacity: 1;
+        }
+        
+        /* 导航栏样式 */
         .navbar {
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 1000;
+            height: var(--navbar-height);
             padding: 0.5rem 1rem;
             background-color: #0d6efd !important;
-            margin-top: calc(-1 * var(--safe-area-inset-top));
-            padding-top: calc(0.5rem + var(--safe-area-inset-top));
+            margin-top: var(--safe-area-inset-top);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .navbar-brand {
@@ -55,6 +75,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: #fff !important;
         }
         
         .nav-link {
@@ -63,23 +84,33 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: rgba(255,255,255,0.9) !important;
         }
         
+        .nav-link:hover {
+            color: #fff !important;
+        }
+        
+        /* 内容区域样式 */
         .container-fluid {
-            padding: 0.5rem;
+            padding: var(--content-padding);
             flex: 1;
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
             margin: 0;
+            position: relative;
         }
         
+        /* 卡片样式 */
         .card {
             margin-bottom: 0.75rem;
             border-radius: 0.5rem;
             overflow: hidden;
             background-color: #fff;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transform: translateZ(0);
+            will-change: transform;
         }
         
         .card-header {
@@ -92,6 +123,7 @@
             padding: 0.75rem;
         }
         
+        /* 表格样式 */
         .table {
             width: 100%;
             margin-bottom: 0;
@@ -108,6 +140,7 @@
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            overscroll-behavior: contain;
         }
         
         .table-responsive::-webkit-scrollbar {
@@ -132,6 +165,7 @@
             border-bottom: 1px solid #dee2e6;
         }
         
+        /* 按钮样式 */
         .btn {
             font-size: 0.9rem;
             padding: 0.25rem 0.5rem;
@@ -142,6 +176,8 @@
             border-radius: 0.25rem;
             transition: all 0.2s ease-in-out;
             -webkit-tap-highlight-color: transparent;
+            transform: translateZ(0);
+            will-change: transform;
         }
         
         .btn:active {
@@ -159,6 +195,7 @@
             gap: 0.25rem;
         }
         
+        /* 导航标签样式 */
         .nav-tabs {
             flex-wrap: nowrap;
             overflow-x: auto;
@@ -167,6 +204,7 @@
             border-bottom: 1px solid #dee2e6;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            overscroll-behavior: contain;
         }
         
         .nav-tabs::-webkit-scrollbar {
@@ -189,6 +227,7 @@
             background-color: transparent;
         }
         
+        /* 表单样式 */
         .form-control {
             font-size: 0.9rem;
             padding: 0.25rem 0.5rem;
@@ -198,6 +237,7 @@
             background-color: #fff;
         }
         
+        /* 提示框样式 */
         .alert {
             font-size: 0.9rem;
             padding: 0.5rem 1rem;
@@ -206,12 +246,14 @@
             border: 1px solid transparent;
         }
         
+        /* 徽章样式 */
         .badge {
             font-size: 0.8rem;
             padding: 0.25em 0.5em;
             border-radius: 0.25rem;
         }
         
+        /* 下拉菜单样式 */
         .dropdown-menu {
             font-size: 0.9rem;
             padding: 0.5rem 0;
@@ -226,9 +268,10 @@
             text-overflow: ellipsis;
         }
         
+        /* 移动端适配 */
         @media (max-width: 768px) {
-            .container-fluid {
-                padding: 0.25rem;
+            :root {
+                --content-padding: 0.25rem;
             }
             
             .card {
@@ -267,29 +310,11 @@
                 padding: 0.2rem 0.4rem;
             }
         }
-        
-        /* 华为鸿蒙系统特定优化 */
-        @supports (-webkit-touch-callout: none) {
-            .table-responsive {
-                -webkit-overflow-scrolling: touch;
-                overscroll-behavior: contain;
-            }
-            
-            .nav-tabs {
-                -webkit-overflow-scrolling: touch;
-                overscroll-behavior: contain;
-            }
-            
-            .btn {
-                -webkit-tap-highlight-color: transparent;
-            }
-            
-            .navbar {
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-            }
-        }
     </style>
+    
+    <!-- 异步加载非关键CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" media="print" onload="this.media='all'">
 </head>
 <body>
     {% if current_user.is_authenticated %}
@@ -362,6 +387,18 @@
         {% block content %}{% endblock %}
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 异步加载JavaScript -->
+    <script>
+        // 页面加载完成后显示内容
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('loaded');
+        });
+        
+        // 预加载Bootstrap
+        var bootstrapScript = document.createElement('script');
+        bootstrapScript.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js';
+        bootstrapScript.async = true;
+        document.head.appendChild(bootstrapScript);
+    </script>
 </body>
 </html> 
