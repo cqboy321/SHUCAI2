@@ -28,6 +28,57 @@ document.addEventListener('DOMContentLoaded', function() {
         navbar.style.top = 'env(safe-area-inset-top, 0px)';
         navbar.style.transform = 'translateY(0)';
         navbar.style.transition = 'none';
+        
+        // 处理移动端菜单展开时的问题
+        const navbarToggler = navbar.querySelector('.navbar-toggler');
+        const navbarCollapse = navbar.querySelector('.navbar-collapse');
+        
+        if (navbarToggler && navbarCollapse && isMobile) {
+            // 点击菜单按钮时正确处理折叠菜单
+            navbarToggler.addEventListener('click', function() {
+                if (navbarCollapse.classList.contains('show')) {
+                    // 关闭菜单
+                    navbarCollapse.style.maxHeight = '0';
+                    setTimeout(() => {
+                        navbarCollapse.classList.remove('show');
+                    }, 50);
+                } else {
+                    // 打开菜单
+                    navbarCollapse.classList.add('show');
+                    navbarCollapse.style.maxHeight = 'calc(100vh - var(--navbar-height) - var(--safe-area-inset-top))';
+                    
+                    // 点击菜单外部区域关闭菜单
+                    document.addEventListener('click', function closeMenu(e) {
+                        if (!navbarCollapse.contains(e.target) && !navbarToggler.contains(e.target)) {
+                            navbarCollapse.classList.remove('show');
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    });
+                }
+            });
+            
+            // 点击菜单项后关闭菜单
+            const navLinks = navbarCollapse.querySelectorAll('.nav-link:not(.dropdown-toggle)');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    navbarCollapse.classList.remove('show');
+                    // 添加点击反馈
+                    this.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                    setTimeout(() => {
+                        this.style.backgroundColor = '';
+                    }, 200);
+                });
+                
+                // 添加触摸反馈
+                link.addEventListener('touchstart', function() {
+                    this.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                });
+                
+                link.addEventListener('touchend', function() {
+                    this.style.backgroundColor = '';
+                });
+            });
+        }
     }
     
     // 修复移动端100vh问题
