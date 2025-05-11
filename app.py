@@ -14,7 +14,10 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, 
+    template_folder='templates',
+    static_folder='static'
+)
 app.config.from_object(Config)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///inventory.db')
@@ -23,6 +26,7 @@ app.config['SQLALCHEMY_POOL_SIZE'] = 10
 app.config['SQLALCHEMY_MAX_OVERFLOW'] = 20
 app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30
 app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # 添加缓存配置
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
