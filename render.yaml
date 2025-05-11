@@ -10,8 +10,6 @@ services:
       export FLASK_APP=wsgi.py
       export FLASK_ENV=production
       export PYTHONPATH=$PYTHONPATH:$(pwd)
-      python -c "from app import db; db.create_all()"
-      python create_admin.py
     startCommand: python -m gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
