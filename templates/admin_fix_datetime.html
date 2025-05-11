@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}修复数据库日期时间格式{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">数据库日期时间格式修复工具</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">工具说明</h5>
+        </div>
+        <div class="card-body">
+            <p>该工具用于修复数据库中ISO格式的日期时间字符串（例如：<code>2025-05-11T19:37:14.519970</code>），将其转换为SQLite兼容的格式。</p>
+            <div class="alert alert-warning">
+                <strong>注意：</strong> 此操作将修改数据库内容。执行前会自动创建数据库备份，但仍请谨慎操作。
+            </div>
+            <h5 class="mt-3">修复内容：</h5>
+            <ul>
+                <li>扫描所有表中的日期时间字段</li>
+                <li>查找并修复格式不兼容的值</li>
+                <li>自动创建数据库备份</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">开始修复</h5>
+                </div>
+                <div class="card-body">
+                    <p>点击下方按钮开始修复数据库中的日期时间格式：</p>
+                    <form method="post" action="{{ url_for('admin_fix_datetime') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary btn-lg">执行修复</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">修复后操作</h5>
+                </div>
+                <div class="card-body">
+                    <p>修复完成后，请确保：</p>
+                    <ol>
+                        <li>检查应用是否正常运行</li>
+                        <li>验证日期时间数据是否正确显示</li>
+                        <li>如发现问题，可使用自动创建的备份恢复</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
