@@ -49,75 +49,151 @@
                 <strong>警告:</strong> 恢复备份将覆盖当前所有数据。此操作不可撤销，请确保您有最新的备份。
             </div>
             
-            {% if backups %}
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100 border-primary">
-                        <div class="card-header bg-primary text-white">
-                            <h6 class="mb-0"><i class="bi bi-database"></i> 从SQLite数据库恢复</h6>
+            <!-- 添加选项卡导航 -->
+            <ul class="nav nav-tabs mb-3" id="restoreTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="server-tab" data-bs-toggle="tab" data-bs-target="#server" type="button" role="tab">
+                        <i class="bi bi-server"></i> 从服务器备份恢复
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">
+                        <i class="bi bi-upload"></i> 从本地文件恢复
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="restoreTabContent">
+                <!-- 服务器备份恢复选项卡 -->
+                <div class="tab-pane fade show active" id="server" role="tabpanel">
+                    {% if backups %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-database"></i> 从SQLite数据库恢复</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" onsubmit="return confirm('确定要恢复此数据库备份？当前所有数据将被覆盖！');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="restore_sqlite">
+                                        <div class="mb-3">
+                                            <label for="sqlite_backup" class="form-label">选择SQLite备份文件</label>
+                                            <select class="form-select" id="sqlite_backup" name="backup_file" required>
+                                                <option value="">-- 请选择 --</option>
+                                                {% for backup in backups %}
+                                                    {% if backup.type == 'SQLite数据库' %}
+                                                    <option value="{{ backup.name }}">{{ backup.name }} ({{ backup.time.strftime('%Y-%m-%d %H:%M:%S') }})</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-arrow-clockwise"></i> 恢复数据库
+                                            </button>
+                                        </div>
+                                        <small class="text-muted mt-1 d-block">从完整SQLite备份文件恢复</small>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <form method="post" onsubmit="return confirm('确定要恢复此数据库备份？当前所有数据将被覆盖！');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="action" value="restore_sqlite">
-                                <div class="mb-3">
-                                    <label for="sqlite_backup" class="form-label">选择SQLite备份文件</label>
-                                    <select class="form-select" id="sqlite_backup" name="backup_file" required>
-                                        <option value="">-- 请选择 --</option>
-                                        {% for backup in backups %}
-                                            {% if backup.type == 'SQLite数据库' %}
-                                            <option value="{{ backup.name }}">{{ backup.name }} ({{ backup.time.strftime('%Y-%m-%d %H:%M:%S') }})</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </select>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-file-earmark-code"></i> 从SQL脚本恢复</h6>
                                 </div>
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-arrow-clockwise"></i> 恢复数据库
-                                    </button>
+                                <div class="card-body">
+                                    <form method="post" onsubmit="return confirm('确定要执行此SQL恢复脚本？当前所有数据将被覆盖！');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="restore_sql">
+                                        <div class="mb-3">
+                                            <label for="sql_backup" class="form-label">选择SQL备份文件</label>
+                                            <select class="form-select" id="sql_backup" name="backup_file" required>
+                                                <option value="">-- 请选择 --</option>
+                                                {% for backup in backups %}
+                                                    {% if backup.type == 'SQL脚本备份' %}
+                                                    <option value="{{ backup.name }}">{{ backup.name }} ({{ backup.time.strftime('%Y-%m-%d %H:%M:%S') }})</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-info text-white">
+                                                <i class="bi bi-arrow-clockwise"></i> 执行SQL恢复
+                                            </button>
+                                        </div>
+                                        <small class="text-muted mt-1 d-block">从SQL脚本恢复数据</small>
+                                    </form>
                                 </div>
-                                <small class="text-muted mt-1 d-block">从完整SQLite备份文件恢复</small>
-                            </form>
+                            </div>
                         </div>
                     </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 服务器上暂无可用的备份文件。请先创建备份或使用下方的上传功能。
+                    </div>
+                    {% endif %}
                 </div>
                 
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100 border-info">
-                        <div class="card-header bg-info text-white">
-                            <h6 class="mb-0"><i class="bi bi-file-earmark-code"></i> 从SQL脚本恢复</h6>
-                        </div>
-                        <div class="card-body">
-                            <form method="post" onsubmit="return confirm('确定要执行此SQL恢复脚本？当前所有数据将被覆盖！');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="action" value="restore_sql">
-                                <div class="mb-3">
-                                    <label for="sql_backup" class="form-label">选择SQL备份文件</label>
-                                    <select class="form-select" id="sql_backup" name="backup_file" required>
-                                        <option value="">-- 请选择 --</option>
-                                        {% for backup in backups %}
-                                            {% if backup.type == 'SQL脚本备份' %}
-                                            <option value="{{ backup.name }}">{{ backup.name }} ({{ backup.time.strftime('%Y-%m-%d %H:%M:%S') }})</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </select>
+                <!-- 本地文件上传恢复选项卡 -->
+                <div class="tab-pane fade" id="upload" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-database"></i> 上传SQLite数据库恢复</h6>
                                 </div>
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-info text-white">
-                                        <i class="bi bi-arrow-clockwise"></i> 执行SQL恢复
-                                    </button>
+                                <div class="card-body">
+                                    <form method="post" enctype="multipart/form-data" onsubmit="return confirm('确定要从上传的数据库备份恢复？当前所有数据将被覆盖！');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="upload_restore_sqlite">
+                                        <div class="mb-3">
+                                            <label for="sqlite_upload" class="form-label">选择SQLite备份文件</label>
+                                            <input type="file" class="form-control" id="sqlite_upload" name="backup_file" accept=".sqlite,.db,.sqlite3" required>
+                                            <small class="text-muted">支持的文件: .sqlite, .db, .sqlite3</small>
+                                        </div>
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-upload"></i> 上传并恢复
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <small class="text-muted mt-1 d-block">从SQL脚本恢复数据</small>
-                            </form>
+                            </div>
                         </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-file-earmark-code"></i> 上传SQL脚本恢复</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" enctype="multipart/form-data" onsubmit="return confirm('确定要执行上传的SQL恢复脚本？当前所有数据将被覆盖！');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="upload_restore_sql">
+                                        <div class="mb-3">
+                                            <label for="sql_upload" class="form-label">选择SQL备份文件</label>
+                                            <input type="file" class="form-control" id="sql_upload" name="backup_file" accept=".sql" required>
+                                            <small class="text-muted">支持的文件: .sql</small>
+                                        </div>
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-info text-white">
+                                                <i class="bi bi-upload"></i> 上传并执行
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 提示：上传恢复操作会先保存文件到服务器，然后执行恢复流程。
                     </div>
                 </div>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> 暂无可用的备份文件。请先创建备份。
-            </div>
-            {% endif %}
         </div>
     </div>
     
