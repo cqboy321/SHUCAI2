@@ -1856,7 +1856,7 @@ def admin_fix_datetime():
             flash(f'修复失败: {str(e)}', 'danger')
             return redirect(url_for('admin_fix_datetime'))
     
-    return render_template('admin/fix_datetime.html')
+    return render_template('admin_fix_datetime.html')
 
 if __name__ == '__main__':
     with app.app_context():
