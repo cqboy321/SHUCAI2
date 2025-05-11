@@ -112,6 +112,20 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         print(f"Checking admin status for user {self.username}: role = {self.role}")
         return self.role == 'admin'
+    
+    # 安全设置日期时间值，防止格式不兼容问题
+    def set_last_login(self, dt_value=None):
+        if dt_value is None:
+            dt_value = datetime.now()
+        elif isinstance(dt_value, str):
+            try:
+                # 尝试解析可能的ISO格式日期
+                if 'T' in dt_value:
+                    dt_value = datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+            except Exception as e:
+                app.logger.error(f"解析日期时间失败: {e}")
+                dt_value = datetime.now()
+        self.last_login = dt_value
 
 class ProductPrice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -125,6 +139,28 @@ class ProductPrice(db.Model):
     __table_args__ = (
         db.UniqueConstraint('name', 'start_date', name='unique_price_period'),
     )
+    
+    # 安全设置日期时间值，防止格式不兼容问题
+    def set_date_fields(self, field_name, dt_value):
+        if dt_value is None:
+            dt_value = datetime.now() if field_name != 'end_date' else None
+        elif isinstance(dt_value, str):
+            try:
+                # 尝试解析可能的ISO格式日期
+                if 'T' in dt_value:
+                    dt_value = datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+            except Exception as e:
+                app.logger.error(f"解析日期时间失败: {e}")
+                dt_value = datetime.now() if field_name != 'end_date' else None
+        
+        if field_name == 'start_date':
+            self.start_date = dt_value
+        elif field_name == 'end_date':
+            self.end_date = dt_value
+        elif field_name == 'created_at':
+            self.created_at = dt_value
+        elif field_name == 'updated_at':
+            self.updated_at = dt_value
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -137,6 +173,12 @@ class ActivityLog(db.Model):
 
 def log_activity(user_id, action, details=None):
     log = ActivityLog(user_id=user_id, action=action, details=details)
+    # 确保创建时间格式正确
+    if hasattr(log, 'created_at') and isinstance(log.created_at, str) and 'T' in log.created_at:
+        try:
+            log.created_at = datetime.fromisoformat(log.created_at.replace('Z', '+00:00'))
+        except Exception as e:
+            app.logger.error(f"解析活动日志创建时间失败: {e}")
     db.session.add(log)
     db.session.commit()
 
@@ -156,6 +198,20 @@ class Product(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # 安全设置日期时间值，防止格式不兼容问题
+    def set_date(self, dt_value=None):
+        if dt_value is None:
+            dt_value = datetime.now()
+        elif isinstance(dt_value, str):
+            try:
+                # 尝试解析可能的ISO格式日期
+                if 'T' in dt_value:
+                    dt_value = datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+            except Exception as e:
+                app.logger.error(f"解析产品日期失败: {e}")
+                dt_value = datetime.now()
+        self.date = dt_value
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -170,7 +226,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
-            user.last_login = datetime.now()
+            user.set_last_login()  # 使用安全方法设置登录时间
             db.session.commit()
             login_user(user)
             log_activity(user.id, '用户登录')
@@ -231,98 +287,100 @@ def batch_operation(type):
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        date = datetime.strptime(request.form['date'], '%Y-%m-%d')
-        today = datetime.now().date()
-        
-        # 验证日期是否为今天
-        if date.date() > today:
-            flash('不能添加未来日期的记录！', 'danger')
-            return redirect(url_for('index'))
+        try:
+            date = datetime.strptime(request.form['date'], '%Y-%m-%d')
+            today = datetime.now().date()
             
-        notes = request.form.get('notes', '')
-        
-        vegetables = ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']
-        total_items = 0
-        items_details = []
-        
-        for i, vegetable in enumerate(vegetables, 1):
-            quantity_str = request.form.get(f'quantity_{vegetable}', '')
-            if not quantity_str:  # 如果数量为空，跳过这个商品
-                continue
+            # 验证日期是否为今天
+            if date.date() > today:
+                flash('不能添加未来日期的记录！', 'danger')
+                return redirect(url_for('index'))
                 
-            try:
-                quantity = float(quantity_str)
-                if quantity <= 0:  # 如果数量小于等于0，跳过这个商品
+            notes = request.form.get('notes', '')
+            
+            vegetables = ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']
+            total_items = 0
+            items_details = []
+            
+            for i, vegetable in enumerate(vegetables, 1):
+                quantity_str = request.form.get(f'quantity_{vegetable}', '')
+                if not quantity_str:  # 如果数量为空，跳过这个商品
                     continue
                     
-                total_items += 1
-                
-                if type == 'sale':
-                    # 获取预设价格
-                    price_record = ProductPrice.query.filter_by(name=vegetable).first()
-                    if not price_record:
-                        flash(f'商品 {vegetable} 没有设置价格，请联系管理员', 'danger')
-                        return redirect(url_for('index'))
-                    price = price_record.sale_price
-                elif type == 'purchase':
-                    price = float(request.form.get(f'price_{vegetable}', 0))
-                    if price <= 0:
-                        flash(f'商品 {vegetable} 的价格必须大于0', 'danger')
-                        return redirect(url_for('index'))
-                else:  # inventory_check
-                    price = float(request.form.get(f'price_{vegetable}', 0))
-                    actual_quantity = float(request.form.get(f'actual_quantity_{vegetable}', 0))
-                    loss_quantity = quantity - actual_quantity  # 计算损耗数量
-                    items_details.append(f"{vegetable}: 系统记录 {quantity}，实际盘点 {actual_quantity}，损耗 {loss_quantity}")
-                
-                if type == 'inventory_check':
-                    product = Product(
-                        name=vegetable,
-                        type=type,
-                        price=price,
-                        quantity=quantity,
-                        actual_quantity=actual_quantity,
-                        loss_quantity=loss_quantity,
-                        date=date,
-                        notes=notes
-                    )
-                else:
-                    product = Product(
-                        name=vegetable,
-                        type=type,
-                        price=price,
-                        quantity=quantity,
-                        date=date,
-                        notes=notes
-                    )
-                db.session.add(product)
-                
-                if type != 'inventory_check':
-                    items_details.append(f"{vegetable}: {quantity}")
-                
-            except ValueError:
-                flash(f'商品 {vegetable} 的数量或价格格式不正确', 'danger')
-                return redirect(url_for('index'))
-        
-        if total_items == 0:
-            flash('请至少输入一个商品的数量', 'danger')
-            return redirect(url_for('index'))
+                try:
+                    quantity = float(quantity_str)
+                    if quantity <= 0:  # 如果数量小于等于0，跳过这个商品
+                        continue
+                        
+                    total_items += 1
+                    
+                    if type == 'sale':
+                        # 获取预设价格
+                        price_record = ProductPrice.query.filter_by(name=vegetable).first()
+                        if not price_record:
+                            flash(f'商品 {vegetable} 没有设置价格，请联系管理员', 'danger')
+                            return redirect(url_for('index'))
+                        price = price_record.sale_price
+                    elif type == 'purchase':
+                        price = float(request.form.get(f'price_{vegetable}', 0))
+                        if price <= 0:
+                            flash(f'商品 {vegetable} 的价格必须大于0', 'danger')
+                            return redirect(url_for('index'))
+                    else:  # inventory_check
+                        price = float(request.form.get(f'price_{vegetable}', 0))
+                        actual_quantity = float(request.form.get(f'actual_quantity_{vegetable}', 0))
+                        loss_quantity = quantity - actual_quantity  # 计算损耗数量
+                        items_details.append(f"{vegetable}: 系统记录 {quantity}，实际盘点 {actual_quantity}，损耗 {loss_quantity}")
+                    
+                    if type == 'inventory_check':
+                        product = Product(
+                            name=vegetable,
+                            type=type,
+                            price=price,
+                            quantity=quantity,
+                            actual_quantity=actual_quantity,
+                            loss_quantity=loss_quantity,
+                            notes=notes
+                        )
+                        # 使用安全的日期设置方法
+                        product.set_date(date)
+                    else:
+                        product = Product(
+                            name=vegetable,
+                            type=type,
+                            price=price,
+                            quantity=quantity,
+                            notes=notes
+                        )
+                        # 使用安全的日期设置方法
+                        product.set_date(date)
+                    
+                    db.session.add(product)
+                    items_details.append(f"{vegetable}: {quantity} x {price}")
+                except Exception as e:
+                    flash(f'处理商品 {vegetable} 时出错: {str(e)}', 'danger')
+                    return redirect(url_for('index'))
             
-        try:
+            if total_items == 0:
+                flash('请至少添加一项商品', 'warning')
+                return redirect(url_for('batch_operation', type=type))
+            
             db.session.commit()
-            log_activity(current_user.id, f'批量{type}操作', f'添加了 {total_items} 个商品: {", ".join(items_details)}')
-            flash('操作成功！', 'success')
+            
+            action_type = {
+                'purchase': '进货',
+                'sale': '销售',
+                'inventory_check': '盘点'
+            }
+            
+            log_activity(current_user.id, action_type[type], '; '.join(items_details))
+            flash(f'{action_type[type]}记录已添加', 'success')
+            return redirect(url_for('index'))
         except Exception as e:
-            db.session.rollback()
-            flash('操作失败，请重试', 'danger')
-            print(f"Error: {str(e)}")
-        
-        return redirect(url_for('index'))
+            flash(f'添加记录时发生错误: {str(e)}', 'danger')
+            return redirect(url_for('index'))
     
-    # GET 请求处理
-    now = datetime.now()
-    price_dict = {p.name: p for p in ProductPrice.query.all()}
-    return render_template('batch_operation.html', type=type, now=now, price_dict=price_dict)
+    return render_template(f'batch_{type}.html')
 
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -330,6 +388,7 @@ def update_product(id):
     product = Product.query.get_or_404(id)
     
     if request.method == 'POST':
+        # 保存原始数据用于活动日志
         old_data = {
             'name': product.name,
             'type': product.type,
@@ -343,7 +402,14 @@ def update_product(id):
         product.type = request.form['type']
         product.price = float(request.form['price'])
         product.quantity = int(request.form['quantity'])
-        product.date = datetime.strptime(request.form['date'], '%Y-%m-%d')
+        # 使用安全的日期设置方法
+        try:
+            date_value = datetime.strptime(request.form['date'], '%Y-%m-%d')
+            product.set_date(date_value)
+        except ValueError as e:
+            app.logger.error(f"日期格式错误: {e}")
+            flash(f'日期格式错误: {e}', 'danger')
+            return render_template('update_product.html', product=product)
         product.notes = request.form['notes']
         
         if product.type == 'inventory_check':
@@ -868,53 +934,102 @@ def edit_prices():
         flash('您没有权限访问此页面', 'danger')
         return redirect(url_for('index'))
     
+    vegetables = ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']
+    
     if request.method == 'POST':
-        vegetables = ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']
+        new_prices = {}
+        start_date = None
         
-        for vegetable in vegetables:
-            sale_price = float(request.form.get(f'sale_price_{vegetable}', 0))
-            start_date_str = request.form.get(f'start_date_{vegetable}')
-            end_date_str = request.form.get(f'end_date_{vegetable}')
-            
-            try:
+        try:
+            # 解析开始日期
+            start_date_str = request.form.get('start_date')
+            if start_date_str:
                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-                end_date = datetime.strptime(end_date_str, '%Y-%m-%d') if end_date_str else None
-                
-                # 检查是否有重叠的时间段
-                existing_price = ProductPrice.query.filter(
+                # 设置为当天的开始时间
+                start_date = datetime.combine(start_date.date(), datetime.min.time())
+            else:
+                start_date = datetime.combine(datetime.now().date(), datetime.min.time())
+            
+            # 收集所有输入的价格数据
+            for vegetable in vegetables:
+                price_str = request.form.get(f'price_{vegetable}')
+                if price_str:
+                    try:
+                        price = float(price_str)
+                        if price > 0:
+                            new_prices[vegetable] = price
+                    except ValueError:
+                        flash(f'{vegetable} 的价格格式不正确', 'danger')
+                        return redirect(url_for('admin_prices'))
+            
+            # 确保至少有一个价格被设置
+            if not new_prices:
+                flash('至少需要设置一个商品的价格', 'danger')
+                return redirect(url_for('admin_prices'))
+            
+            # 生效开始日期的前一天结束现有价格
+            update_count = 0
+            for vegetable, new_price in new_prices.items():
+                # 查找当前有效的价格记录
+                current_price = ProductPrice.query.filter(
                     ProductPrice.name == vegetable,
-                    ProductPrice.start_date <= start_date,
                     (ProductPrice.end_date == None) | (ProductPrice.end_date >= start_date)
-                ).first()
+                ).order_by(ProductPrice.start_date.desc()).first()
                 
-                if existing_price:
-                    flash(f'商品 {vegetable} 在所选时间段内已有价格设置', 'danger')
-                    return redirect(url_for('edit_prices'))
+                if current_price and current_price.sale_price == new_price and current_price.start_date <= start_date:
+                    # 价格相同，不需要创建新记录
+                    continue
                 
-                price = ProductPrice(
+                if current_price and current_price.end_date is None:
+                    # 将当前有效价格设置结束日期
+                    end_date = start_date - timedelta(seconds=1)
+                    # 使用安全的日期设置方法
+                    current_price.set_date_fields('end_date', end_date)
+                
+                # 创建新价格记录
+                new_price_record = ProductPrice(
                     name=vegetable,
-                    sale_price=sale_price,
-                    start_date=start_date,
-                    end_date=end_date
+                    sale_price=new_price
                 )
-                db.session.add(price)
+                # 使用安全的日期设置方法
+                new_price_record.set_date_fields('start_date', start_date)
                 
-            except ValueError:
-                flash(f'商品 {vegetable} 的日期格式不正确', 'danger')
-                return redirect(url_for('edit_prices'))
+                db.session.add(new_price_record)
+                update_count += 1
+            
+            db.session.commit()
+            
+            if update_count > 0:
+                price_details = ", ".join([f"{v}: {p}" for v, p in new_prices.items()])
+                log_activity(current_user.id, '更新商品价格', f"从 {start_date.strftime('%Y-%m-%d')} 开始 - {price_details}")
+                flash(f'成功更新 {update_count} 个商品的价格', 'success')
+            else:
+                flash('没有价格需要更新', 'info')
+            
+            return redirect(url_for('admin_prices'))
         
-        db.session.commit()
-        log_activity(current_user.id, '更新销售价格')
-        flash('价格更新成功', 'success')
-        return redirect(url_for('admin_prices'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'更新价格时出错: {str(e)}', 'danger')
+            return redirect(url_for('admin_prices'))
     
-    # GET请求处理
-    current_prices = ProductPrice.query.filter(
-        (ProductPrice.end_date == None) | (ProductPrice.end_date > datetime.now())
-    ).order_by(ProductPrice.name, ProductPrice.start_date.desc()).all()
+    # 获取当前价格
+    current_prices = {}
+    for vegetable in vegetables:
+        price_record = ProductPrice.query.filter(
+            ProductPrice.name == vegetable,
+            (ProductPrice.end_date == None) | (ProductPrice.end_date > datetime.now())
+        ).order_by(ProductPrice.start_date.desc()).first()
+        
+        if price_record:
+            current_prices[vegetable] = {
+                'price': price_record.sale_price,
+                'start_date': price_record.start_date.strftime('%Y-%m-%d')
+            }
+        else:
+            current_prices[vegetable] = {'price': 0, 'start_date': '未设置'}
     
-    price_dict = {price.name: price for price in current_prices}
-    return render_template('edit_prices.html', price_dict=price_dict, now=datetime.now())
+    return render_template('edit_prices.html', vegetables=vegetables, current_prices=current_prices)
 
 # 修改获取价格的函数
 def get_current_price(vegetable_name):
@@ -934,138 +1049,161 @@ def import_prices_excel():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        # 检查是否有文件上传
-        if 'price_file' not in request.files:
-            flash('没有选择文件', 'danger')
+        if 'file' not in request.files:
+            flash('没有找到上传的文件', 'danger')
             return redirect(url_for('admin_prices'))
         
-        file = request.files['price_file']
+        file = request.files['file']
         if file.filename == '':
             flash('没有选择文件', 'danger')
             return redirect(url_for('admin_prices'))
         
-        if file and ('xlsx' in file.filename or 'xls' in file.filename):
-            # 创建临时文件来保存上传的内容
-            import tempfile
-            import pandas as pd
-            from dateutil.parser import parse
+        if not file.filename.endswith(('.xls', '.xlsx')):
+            flash('请上传Excel文件 (.xls 或 .xlsx)', 'danger')
+            return redirect(url_for('admin_prices'))
+        
+        try:
+            # 读取Excel文件
+            df = pd.read_excel(file)
             
-            temp = None
-            try:
-                temp = tempfile.NamedTemporaryFile(delete=False)
-                file.save(temp.name)
-                temp.close()  # 确保文件被关闭，以便在Windows上能够读取
-                
-                # 使用pandas读取Excel数据
-                df = pd.read_excel(temp.name)
-                
-                # 必要的列：商品名称、销售价格、开始日期、结束日期(可选)
-                required_columns = ['商品名称', '销售价格', '开始日期']
-                
-                # 检查是否包含必要的列
-                missing_columns = [col for col in required_columns if col not in df.columns]
-                if missing_columns:
-                    flash(f'Excel文件缺少必要的列: {", ".join(missing_columns)}', 'danger')
+            # 检查必要的列
+            required_columns = ['商品名称', '销售价格', '生效日期']
+            for col in required_columns:
+                if col not in df.columns:
+                    flash(f'Excel文件缺少必要的列: {col}', 'danger')
                     return redirect(url_for('admin_prices'))
-                
-                # 计数器来跟踪导入的条目
-                success_count = 0
-                error_count = 0
-                skipped_count = 0
-                
-                # 蔬菜列表检查
-                valid_vegetables = ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']
-                
-                # 处理数据
-                for index, row in df.iterrows():
-                    vegetable_name = str(row['商品名称']).strip()
-                    
-                    # 跳过不在系统中的蔬菜
-                    if vegetable_name not in valid_vegetables:
-                        skipped_count += 1
-                        continue
-                    
-                    try:
-                        # 提取价格
-                        sale_price = float(row['销售价格'])
-                        
-                        # 处理日期 - 开始日期是必需的
-                        try:
-                            start_date = pd.to_datetime(row['开始日期']).to_pydatetime()
-                        except:
-                            # 尝试使用dateutil进行更灵活的解析
-                            start_date = parse(str(row['开始日期']))
-                        
-                        # 结束日期是可选的
-                        end_date = None
-                        if '结束日期' in df.columns and pd.notna(row['结束日期']):
-                            try:
-                                end_date = pd.to_datetime(row['结束日期']).to_pydatetime()
-                            except:
-                                try:
-                                    end_date = parse(str(row['结束日期']))
-                                except:
-                                    # 如果无法解析结束日期，则设为None
-                                    end_date = None
-                        
-                        # 价格有效性检查
-                        if sale_price <= 0:
-                            error_count += 1
-                            continue
-                            
-                        # 检查是否有重叠的时间段
-                        existing_price = ProductPrice.query.filter(
-                            ProductPrice.name == vegetable_name,
-                            ProductPrice.start_date <= start_date,
-                            (ProductPrice.end_date == None) | (ProductPrice.end_date >= start_date)
-                        ).first()
-                        
-                        if existing_price:
-                            skipped_count += 1
-                            continue
-                        
-                        # 创建新的价格记录
-                        price = ProductPrice(
-                            name=vegetable_name,
-                            sale_price=sale_price,
-                            start_date=start_date,
-                            end_date=end_date
-                        )
-                        db.session.add(price)
-                        success_count += 1
-                        
-                    except Exception as e:
-                        error_count += 1
-                        continue
-                
-                # 提交所有更改
-                db.session.commit()
-                
-                # 记录活动
-                log_activity(current_user.id, '导入价格表', f'成功: {success_count}, 跳过: {skipped_count}, 错误: {error_count}')
-                
-                if success_count > 0:
-                    flash(f'成功导入 {success_count} 条价格记录，跳过 {skipped_count} 条，{error_count} 条出错。', 'success')
-                else:
-                    flash('没有成功导入任何价格记录', 'warning')
-                    
-            except Exception as e:
-                db.session.rollback()
-                flash(f'处理Excel文件时出错: {str(e)}', 'danger')
-            finally:
-                # 确保无论如何都删除临时文件
-                if temp is not None:
-                    try:
-                        os.unlink(temp.name)
-                    except:
-                        pass
-                
-            return redirect(url_for('admin_prices'))
-        else:
-            flash('仅支持上传Excel文件(.xlsx 或 .xls)', 'danger')
-            return redirect(url_for('admin_prices'))
             
-    # GET请求 - 显示上传表单
+            # 处理每一行数据
+            success_count = 0
+            error_messages = []
+            now = datetime.now()
+            
+            for index, row in df.iterrows():
+                try:
+                    vegetable_name = str(row['商品名称']).strip()
+                    sale_price = float(row['销售价格'])
+                    
+                    # 处理日期
+                    if pd.isna(row['生效日期']):
+                        start_date = now
+                    else:
+                        start_date_value = row['生效日期']
+                        if isinstance(start_date_value, (datetime, pd.Timestamp)):
+                            start_date = start_date_value.to_pydatetime() if hasattr(start_date_value, 'to_pydatetime') else start_date_value
+                        elif isinstance(start_date_value, str):
+                            try:
+                                # 尝试解析各种格式的日期字符串
+                                if '/' in start_date_value:
+                                    start_date = datetime.strptime(start_date_value, '%Y/%m/%d')
+                                elif '-' in start_date_value:
+                                    start_date = datetime.strptime(start_date_value, '%Y-%m-%d')
+                                elif 'T' in start_date_value:
+                                    start_date = datetime.fromisoformat(start_date_value.replace('Z', '+00:00'))
+                                else:
+                                    # 尝试一些常见格式
+                                    formats = ['%Y%m%d', '%d%m%Y', '%m%d%Y']
+                                    for fmt in formats:
+                                        try:
+                                            start_date = datetime.strptime(start_date_value, fmt)
+                                            break
+                                        except ValueError:
+                                            continue
+                                    else:
+                                        raise ValueError(f"无法解析日期格式: {start_date_value}")
+                            except ValueError as e:
+                                error_messages.append(f"行 {index+2}: {vegetable_name} - 日期格式错误: {str(e)}")
+                                continue
+                        else:
+                            error_messages.append(f"行 {index+2}: {vegetable_name} - 无法识别的日期类型")
+                            continue
+                    
+                    # 设置为当天的开始时间
+                    start_date = datetime.combine(start_date.date(), datetime.min.time())
+                    
+                    # 处理结束日期，如果存在
+                    end_date = None
+                    if '结束日期' in df.columns and not pd.isna(row['结束日期']):
+                        end_date_value = row['结束日期']
+                        if isinstance(end_date_value, (datetime, pd.Timestamp)):
+                            end_date = end_date_value.to_pydatetime() if hasattr(end_date_value, 'to_pydatetime') else end_date_value
+                        elif isinstance(end_date_value, str):
+                            try:
+                                # 尝试解析各种格式的日期字符串
+                                if '/' in end_date_value:
+                                    end_date = datetime.strptime(end_date_value, '%Y/%m/%d')
+                                elif '-' in end_date_value:
+                                    end_date = datetime.strptime(end_date_value, '%Y-%m-%d')
+                                elif 'T' in end_date_value:
+                                    end_date = datetime.fromisoformat(end_date_value.replace('Z', '+00:00'))
+                                else:
+                                    # 尝试一些常见格式
+                                    formats = ['%Y%m%d', '%d%m%Y', '%m%d%Y']
+                                    for fmt in formats:
+                                        try:
+                                            end_date = datetime.strptime(end_date_value, fmt)
+                                            break
+                                        except ValueError:
+                                            continue
+                                    else:
+                                        raise ValueError(f"无法解析结束日期格式: {end_date_value}")
+                            except ValueError as e:
+                                error_messages.append(f"行 {index+2}: {vegetable_name} - 结束日期格式错误: {str(e)}")
+                                continue
+                        
+                        # 设置为当天的结束时间
+                        end_date = datetime.combine(end_date.date(), datetime.max.time())
+                    
+                    # 查找当前有效的价格记录
+                    current_price = ProductPrice.query.filter(
+                        ProductPrice.name == vegetable_name,
+                        (ProductPrice.end_date == None) | (ProductPrice.end_date > start_date)
+                    ).order_by(ProductPrice.start_date.desc()).first()
+                    
+                    if current_price and current_price.sale_price == sale_price and current_price.start_date <= start_date:
+                        # 价格相同，不需要创建新记录
+                        continue
+                    
+                    if current_price and current_price.end_date is None:
+                        # 将当前有效价格设置结束日期
+                        # 使用安全的日期设置方法
+                        new_end_date = start_date - timedelta(seconds=1)
+                        current_price.set_date_fields('end_date', new_end_date)
+                    
+                    # 创建新价格记录
+                    new_price = ProductPrice(
+                        name=vegetable_name,
+                        sale_price=sale_price
+                    )
+                    # 使用安全的日期设置方法
+                    new_price.set_date_fields('start_date', start_date)
+                    if end_date:
+                        new_price.set_date_fields('end_date', end_date)
+                    
+                    db.session.add(new_price)
+                    success_count += 1
+                
+                except Exception as e:
+                    error_messages.append(f"行 {index+2}: {vegetable_name if 'vegetable_name' in locals() else '未知'} - {str(e)}")
+            
+            if error_messages:
+                # 如果有错误，回滚事务
+                db.session.rollback()
+                for msg in error_messages:
+                    flash(msg, 'danger')
+                return redirect(url_for('admin_prices'))
+            
+            # 提交事务
+            db.session.commit()
+            
+            log_activity(current_user.id, '导入价格Excel', f"成功导入 {success_count} 条价格记录")
+            flash(f'成功导入 {success_count} 条价格记录', 'success')
+            return redirect(url_for('admin_prices'))
+        
+        except Exception as e:
+            db.session.rollback()
+            flash(f'导入Excel时出错: {str(e)}', 'danger')
+            return redirect(url_for('admin_prices'))
+    
     return render_template('import_prices.html')
 
 @app.route('/batch/inventory_check', methods=['GET', 'POST'])
