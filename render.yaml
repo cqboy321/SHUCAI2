@@ -5,6 +5,9 @@ services:
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
+      # Ensure fix_deployment.py is executable (though typically not needed for python scripts)
+      # chmod +x fix_deployment.py 
+      python fix_deployment.py # Run the script to fix wsgi.py
       mkdir -p templates static
       cp -r templates/* templates/ || true
       cp -r static/* static/ || true
