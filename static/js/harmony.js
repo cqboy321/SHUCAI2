@@ -3,6 +3,14 @@
  * HarmonyOS Optimization Script
  */
 
+// 立即执行的初始化函数，确保在DOM内容加载前准备好
+(function() {
+    // 预设置导航菜单默认为折叠状态
+    if (window.localStorage.getItem('navbarExpanded') === 'true') {
+        window.localStorage.setItem('navbarExpanded', 'false');
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     // 检测是否是鸿蒙系统
     const isHarmonyOS = /HarmonyOS|EMUI|HUAWEI|HiSilicon/i.test(navigator.userAgent);
@@ -29,53 +37,75 @@ document.addEventListener('DOMContentLoaded', function() {
         navbar.style.transform = 'translateY(0)';
         navbar.style.transition = 'none';
         
-        // 处理移动端菜单展开时的问题
-        const navbarToggler = navbar.querySelector('.navbar-toggler');
-        const navbarCollapse = navbar.querySelector('.navbar-collapse');
+        // 处理自定义导航菜单
+        const navbarToggler = document.getElementById('navbarToggler');
+        const navbarMenu = document.getElementById('navbarMenu');
         
-        if (navbarToggler && navbarCollapse && isMobile) {
-            // 点击菜单按钮时正确处理折叠菜单
-            navbarToggler.addEventListener('click', function() {
-                if (navbarCollapse.classList.contains('show')) {
-                    // 关闭菜单
-                    navbarCollapse.style.maxHeight = '0';
-                    setTimeout(() => {
-                        navbarCollapse.classList.remove('show');
-                    }, 50);
-                } else {
-                    // 打开菜单
-                    navbarCollapse.classList.add('show');
-                    navbarCollapse.style.maxHeight = 'calc(100vh - var(--navbar-height) - var(--safe-area-inset-top))';
+        if (navbarToggler && navbarMenu && isMobile) {
+            // 确保初始状态下菜单是隐藏的
+            navbarMenu.style.display = 'none';
+            
+            console.log('Custom mobile menu initialized');
+            
+            // 点击菜单按钮时处理菜单显示/隐藏
+            navbarToggler.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (navbarMenu.style.display === 'none' || navbarMenu.style.display === '') {
+                    // 显示菜单
+                    navbarMenu.style.display = 'block';
+                    navbarToggler.classList.remove('collapsed');
                     
-                    // 点击菜单外部区域关闭菜单
-                    document.addEventListener('click', function closeMenu(e) {
-                        if (!navbarCollapse.contains(e.target) && !navbarToggler.contains(e.target)) {
-                            navbarCollapse.classList.remove('show');
+                    // 点击菜单外部区域隐藏菜单
+                    const closeMenu = function(e) {
+                        if (!navbarMenu.contains(e.target) && !navbarToggler.contains(e.target)) {
+                            navbarMenu.style.display = 'none';
+                            navbarToggler.classList.add('collapsed');
                             document.removeEventListener('click', closeMenu);
                         }
-                    });
+                    };
+                    
+                    // 延迟添加点击事件监听
+                    setTimeout(() => {
+                        document.addEventListener('click', closeMenu);
+                    }, 10);
+                } else {
+                    // 隐藏菜单
+                    navbarMenu.style.display = 'none';
+                    navbarToggler.classList.add('collapsed');
                 }
             });
             
-            // 点击菜单项后关闭菜单
-            const navLinks = navbarCollapse.querySelectorAll('.nav-link:not(.dropdown-toggle)');
+            // 处理菜单中的下拉选项
+            const dropdownToggle = navbarMenu.querySelector('.dropdown-toggle');
+            const dropdownMenu = navbarMenu.querySelector('.dropdown-menu');
+            
+            if (dropdownToggle && dropdownMenu) {
+                dropdownToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (dropdownMenu.style.display === 'none' || dropdownMenu.style.display === '') {
+                        dropdownMenu.style.display = 'block';
+                    } else {
+                        dropdownMenu.style.display = 'none';
+                    }
+                });
+            }
+            
+            // 点击菜单项时隐藏菜单
+            const navLinks = navbarMenu.querySelectorAll('.nav-link:not(.dropdown-toggle)');
             navLinks.forEach(link => {
                 link.addEventListener('click', function() {
-                    navbarCollapse.classList.remove('show');
+                    navbarMenu.style.display = 'none';
+                    navbarToggler.classList.add('collapsed');
+                    
                     // 添加点击反馈
                     this.style.backgroundColor = 'rgba(255,255,255,0.2)';
                     setTimeout(() => {
                         this.style.backgroundColor = '';
                     }, 200);
-                });
-                
-                // 添加触摸反馈
-                link.addEventListener('touchstart', function() {
-                    this.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                });
-                
-                link.addEventListener('touchend', function() {
-                    this.style.backgroundColor = '';
                 });
             });
         }
