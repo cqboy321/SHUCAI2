@@ -30,8 +30,16 @@ logger.debug(f"Current directory: {current_dir}")
 logger.debug(f"Template folder: {os.path.join(current_dir, 'templates')}")
 logger.debug(f"Static folder: {os.path.join(current_dir, 'static')}")
 
+# 检查模板目录是否存在
+template_dir = os.path.join(current_dir, 'templates')
+if os.path.exists(template_dir):
+    logger.debug(f"Template directory exists: {template_dir}")
+    logger.debug(f"Template files: {os.listdir(template_dir)}")
+else:
+    logger.error(f"Template directory does not exist: {template_dir}")
+
 app = Flask(__name__, 
-    template_folder=os.path.join(current_dir, 'templates'),
+    template_folder=template_dir,
     static_folder=os.path.join(current_dir, 'static')
 )
 
