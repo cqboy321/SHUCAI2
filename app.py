@@ -271,7 +271,7 @@ def batch_operation(type):
                 else:  # inventory_check
                     price = float(request.form.get(f'price_{vegetable}', 0))
                     actual_quantity = float(request.form.get(f'actual_quantity_{vegetable}', 0))
-                    loss_quantity = max(0, quantity - actual_quantity)  # 计算损耗数量
+                    loss_quantity = quantity - actual_quantity  # 计算损耗数量
                     items_details.append(f"{vegetable}: 系统记录 {quantity}，实际盘点 {actual_quantity}，损耗 {loss_quantity}")
                 
                 if type == 'inventory_check':
@@ -347,7 +347,7 @@ def update_product(id):
         
         if product.type == 'inventory_check':
             product.actual_quantity = int(request.form['actual_quantity'])
-            product.loss_quantity = max(0, product.quantity - product.actual_quantity)
+            product.loss_quantity = product.quantity - product.actual_quantity
         else:
             product.actual_quantity = 0
             product.loss_quantity = 0
@@ -949,7 +949,8 @@ def inventory_check():
             if actual_quantity:  # 只处理有实际数量的商品
                 actual_quantity = float(actual_quantity)
                 system_quantity = float(system_quantity) if system_quantity else 0
-                loss_quantity = max(0, system_quantity - actual_quantity)
+                # 损耗数量计算修改：系统记录-实际数量，可以为负数（表示有额外增加）
+                loss_quantity = system_quantity - actual_quantity
                 
                 # 创建盘点记录
                 product = Product(
