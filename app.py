@@ -1726,6 +1726,138 @@ def delete_backup(filename):
     
     return redirect(url_for('admin_backup'))
 
+@app.route('/admin/fix_datetime', methods=['GET', 'POST'])
+@login_required
+def admin_fix_datetime():
+    if not current_user.is_admin():
+        flash('只有管理员才能执行此操作', 'danger')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        try:
+            # 获取数据库路径
+            db_path = app.config['SQLALCHEMY_DATABASE_URI']
+            if db_path.startswith('sqlite:///'):
+                db_path = db_path[10:]  # 移除 'sqlite:///'
+            
+            # 记录当前时间作为备份标识
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_path = f"admin_backup_before_fix_{timestamp}.sqlite"
+            
+            # 创建数据库备份
+            conn = sqlite3.connect(db_path)
+            backup_conn = sqlite3.connect(backup_path)
+            conn.backup(backup_conn)
+            backup_conn.close()
+            
+            cursor = conn.cursor()
+            
+            # 查找所有表
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [row[0] for row in cursor.fetchall()]
+            
+            # 排除系统表
+            tables = [t for t in tables if not t.startswith('sqlite_')]
+            
+            # 对每个表进行处理
+            total_fixes = 0
+            table_fixes = {}
+            
+            for table in tables:
+                # 获取表的列结构
+                cursor.execute(f"PRAGMA table_info({table})")
+                columns = cursor.fetchall()
+                
+                # 寻找可能是日期时间类型的列
+                dt_columns = []
+                for col in columns:
+                    col_name = col[1]
+                    if (
+                        col[2].lower() in ('datetime', 'timestamp', 'date') or
+                        col_name.lower() in ('created_at', 'updated_at', 'last_login', 'date', 'timestamp', 
+                                           'start_date', 'end_date', 'deleted_at', 'accessed_at')
+                    ):
+                        dt_columns.append(col_name)
+                
+                if not dt_columns:
+                    continue
+                
+                # 获取表的行数
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                total_rows = cursor.fetchone()[0]
+                
+                # 如果表为空，跳过
+                if total_rows == 0:
+                    continue
+                
+                # 分批处理大表
+                batch_size = 500
+                table_fix_count = 0
+                
+                for offset in range(0, total_rows, batch_size):
+                    # 构建查询语句
+                    select_cols = "id, " + ", ".join(dt_columns)
+                    query = f"SELECT {select_cols} FROM {table} LIMIT ? OFFSET ?"
+                    
+                    try:
+                        cursor.execute(query, [batch_size, offset])
+                        rows = cursor.fetchall()
+                        
+                        for row in rows:
+                            row_id = row[0]
+                            updates = []
+                            params = []
+                            
+                            for i, col_name in enumerate(dt_columns, 1):
+                                dt_value = row[i]
+                                if dt_value and isinstance(dt_value, str) and 'T' in dt_value:
+                                    try:
+                                        # 将ISO格式转换为SQLite兼容格式
+                                        dt_obj = datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+                                        new_dt_str = dt_obj.strftime('%Y-%m-%d %H:%M:%S.%f')
+                                        updates.append(f"{col_name} = ?")
+                                        params.append(new_dt_str)
+                                    except Exception as e:
+                                        app.logger.error(f"解析 {table}.{col_name} (ID={row_id}) 时出错: {e}")
+                            
+                            if updates:
+                                try:
+                                    cursor.execute(
+                                        f"UPDATE {table} SET {', '.join(updates)} WHERE id = ?", 
+                                        params + [row_id]
+                                    )
+                                    table_fix_count += 1
+                                    total_fixes += 1
+                                except Exception as e:
+                                    app.logger.error(f"更新 {table} (ID={row_id}) 失败: {e}")
+                        
+                        # 每批次都提交以降低内存使用
+                        conn.commit()
+                    
+                    except Exception as e:
+                        app.logger.error(f"处理表 {table} 批次数据时出错: {e}")
+                
+                if table_fix_count > 0:
+                    table_fixes[table] = table_fix_count
+            
+            # 最终提交并关闭连接
+            conn.commit()
+            conn.close()
+            
+            # 记录活动日志
+            details = f"总共修复 {total_fixes} 行数据。详情: {str(table_fixes)}"
+            log_activity(current_user.id, "修复数据库日期时间格式", details)
+            
+            flash(f'数据库修复完成，总共修复 {total_fixes} 行数据，已创建备份：{backup_path}', 'success')
+            return redirect(url_for('admin_fix_datetime'))
+            
+        except Exception as e:
+            app.logger.error(f"修复数据库时出错: {str(e)}")
+            flash(f'修复失败: {str(e)}', 'danger')
+            return redirect(url_for('admin_fix_datetime'))
+    
+    return render_template('admin/fix_datetime.html')
+
 if __name__ == '__main__':
     with app.app_context():
         # 备份用户数据
