@@ -1049,11 +1049,11 @@ def import_prices_excel():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        if 'file' not in request.files:
+        if 'price_file' not in request.files:
             flash('没有找到上传的文件', 'danger')
             return redirect(url_for('admin_prices'))
         
-        file = request.files['file']
+        file = request.files['price_file']
         if file.filename == '':
             flash('没有选择文件', 'danger')
             return redirect(url_for('admin_prices'))
@@ -1067,7 +1067,7 @@ def import_prices_excel():
             df = pd.read_excel(file)
             
             # 检查必要的列
-            required_columns = ['商品名称', '销售价格', '生效日期']
+            required_columns = ['商品名称', '销售价格', '开始日期']
             for col in required_columns:
                 if col not in df.columns:
                     flash(f'Excel文件缺少必要的列: {col}', 'danger')
@@ -1084,10 +1084,10 @@ def import_prices_excel():
                     sale_price = float(row['销售价格'])
                     
                     # 处理日期
-                    if pd.isna(row['生效日期']):
+                    if pd.isna(row['开始日期']):
                         start_date = now
                     else:
-                        start_date_value = row['生效日期']
+                        start_date_value = row['开始日期']
                         if isinstance(start_date_value, (datetime, pd.Timestamp)):
                             start_date = start_date_value.to_pydatetime() if hasattr(start_date_value, 'to_pydatetime') else start_date_value
                         elif isinstance(start_date_value, str):
