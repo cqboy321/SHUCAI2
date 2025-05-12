@@ -7,28 +7,29 @@
       <h4 class="mb-0">登录</h4>
     </div>
     <div class="card-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      
       <form method="post" action="{{ url_for('login') }}">
-        {{ form.hidden_tag() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
         <div class="mb-3">
-          <label for="username" class="form-label">{{ form.username.label }}</label>
-          {{ form.username(class="form-control", id="username") }}
-          {% if form.username.errors %}
-            {% for error in form.username.errors %}
-              <div class="text-danger small">{{ error }}</div>
-            {% endfor %}
-          {% endif %}
+          <label for="username" class="form-label">用户名</label>
+          <input type="text" class="form-control" id="username" name="username" required minlength="2" maxlength="80">
         </div>
+        
         <div class="mb-3">
-          <label for="password" class="form-label">{{ form.password.label }}</label>
-          {{ form.password(class="form-control", id="password") }}
-          {% if form.password.errors %}
-            {% for error in form.password.errors %}
-              <div class="text-danger small">{{ error }}</div>
-            {% endfor %}
-          {% endif %}
+          <label for="password" class="form-label">密码</label>
+          <input type="password" class="form-control" id="password" name="password" required minlength="6" maxlength="120">
         </div>
+        
         <div class="d-flex justify-content-between align-items-center">
-          {{ form.submit(class="btn btn-primary") }}
+          <button type="submit" class="btn btn-primary">登录</button>
           <a href="{{ url_for('register') }}">注册新账号</a>
         </div>
       </form>

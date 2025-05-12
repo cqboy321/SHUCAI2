@@ -5,9 +5,9 @@
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
             <h3 class="mb-0">
-                {% if type == 'purchase' %}
+                {% if operation_type == 'purchase' %}
                 批量进货
-                {% elif type == 'sale' %}
+                {% elif operation_type == 'sale' %}
                 批量销售
                 {% else %}
                 库存盘点
@@ -34,7 +34,7 @@
                         <thead>
                             <tr>
                                 <th>商品名称</th>
-                                {% if type == 'inventory_check' %}
+                                {% if operation_type == 'inventory_check' %}
                                 <th>系统记录数量</th>
                                 <th>实际数量</th>
                                 <th>最近进货价格</th>
@@ -48,7 +48,7 @@
                             {% for vegetable in ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜'] %}
                             <tr>
                                 <td>{{ vegetable }}</td>
-                                {% if type == 'inventory_check' %}
+                                {% if operation_type == 'inventory_check' %}
                                 <td>
                                     <input type="number" name="quantity_{{ vegetable }}" class="form-control" 
                                            value="{{ price_dict[vegetable].quantity if vegetable in price_dict else 0 }}" 
@@ -67,10 +67,10 @@
                                 <td>
                                     <input type="number" name="quantity_{{ vegetable }}" class="form-control" 
                                            step="0.01" min="0" placeholder="输入数量">
-                                    <small class="form-text text-muted">留空表示不{{ '销售' if type == 'sale' else '进货' }}此商品</small>
+                                    <small class="form-text text-muted">留空表示不{{ '销售' if operation_type == 'sale' else '进货' }}此商品</small>
                                 </td>
                                 <td>
-                                    {% if type == 'sale' %}
+                                    {% if operation_type == 'sale' %}
                                     ¥{{ "%.2f"|format(price_dict[vegetable].sale_price) if vegetable in price_dict else 0 }}
                                     {% else %}
                                     <input type="number" name="price_{{ vegetable }}" class="form-control" 

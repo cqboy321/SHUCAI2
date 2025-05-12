@@ -6,9 +6,9 @@
     <div class="card shadow mb-3">
         <div class="card-body p-2">
             <div class="d-flex justify-content-center gap-3">
-                <a href="{{ url_for('batch_operation', type='purchase') }}" class="btn btn-success flex-fill">进货</a>
-                <a href="{{ url_for('batch_operation', type='sale') }}" class="btn btn-warning flex-fill">销售</a>
-                <a href="{{ url_for('batch_operation', type='inventory_check') }}" class="btn btn-info flex-fill">盘点</a>
+                <a href="{{ url_for('batch_operation', operation_type='purchase') }}" class="btn btn-success flex-fill">进货</a>
+                <a href="{{ url_for('batch_operation', operation_type='sale') }}" class="btn btn-warning flex-fill">销售</a>
+                <a href="{{ url_for('batch_operation', operation_type='inventory_check') }}" class="btn btn-info flex-fill">盘点</a>
             </div>
         </div>
     </div>
