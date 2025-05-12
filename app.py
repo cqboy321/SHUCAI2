@@ -53,6 +53,9 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///inventory.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1小时
+app.config['WTF_CSRF_SSL_STRICT'] = False  # 允许非HTTPS请求
 
 # 添加缓存配置
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1年
@@ -71,11 +74,26 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 csrf = CSRFProtect(app)
 
+logger.debug(f"CSRF保护已启用, SECRET_KEY: {'已设置' if app.config['SECRET_KEY'] else '未设置'}")
+logger.debug(f"CSRF时间限制: {app.config['WTF_CSRF_TIME_LIMIT']}秒")
+
 # 定义表单类
 class LoginForm(FlaskForm):
-    username = StringField('用户名', validators=[DataRequired(), Length(min=2, max=80)])
-    password = PasswordField('密码', validators=[DataRequired(), Length(min=6, max=120)])
+    username = StringField('用户名', validators=[DataRequired(message='请输入用户名'), Length(min=2, max=80, message='用户名长度应为2-80个字符')])
+    password = PasswordField('密码', validators=[DataRequired(message='请输入密码'), Length(min=6, max=120, message='密码长度应为6-120个字符')])
     submit = SubmitField('登录')
+    
+    def __init__(self, *args, **kwargs):
+        super(LoginForm, self).__init__(*args, **kwargs)
+        logger.debug(f"初始化LoginForm, CSRF: {self.csrf_token._value()}")
+    
+    def validate(self):
+        logger.debug(f"验证LoginForm")
+        if not super(LoginForm, self).validate():
+            logger.debug(f"基本验证失败: {self.errors}")
+            return False
+        logger.debug("验证通过")
+        return True
 
 # 添加错误处理
 @app.errorhandler(500)
@@ -218,32 +236,47 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
+    logger.debug("访问登录页面")
     form = LoginForm()
+    logger.debug(f"登录表单初始化完成: {form}")
     
-    if form.validate_on_submit():
-        username = form.username.data
-        password = form.password.data
-        user = User.query.filter_by(username=username).first()
+    if request.method == 'POST':
+        logger.debug(f"登录POST请求: {request.form}")
         
-        if user and user.check_password(password):
-            user.set_last_login()  # 使用安全方法设置登录时间
-            db.session.commit()
-            login_user(user)
-            log_activity(user.id, '用户登录')
+        if form.validate_on_submit():
+            username = form.username.data
+            password = form.password.data
+            logger.debug(f"尝试登录用户: {username}")
             
-            # 获取next参数用于重定向
-            next_page = request.args.get('next')
-            if next_page:
-                return redirect(next_page)
-            return redirect(url_for('index'))
+            user = User.query.filter_by(username=username).first()
             
-        flash('用户名或密码错误', 'danger')
+            if user and user.check_password(password):
+                user.set_last_login()  # 使用安全方法设置登录时间
+                db.session.commit()
+                login_user(user)
+                logger.debug(f"用户 {username} 登录成功")
+                log_activity(user.id, '用户登录')
+                
+                # 获取next参数用于重定向
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect(url_for('index'))
+            else:
+                logger.debug(f"用户 {username} 登录失败: 用户名或密码错误")
+                flash('用户名或密码错误', 'danger')
+        else:
+            logger.debug(f"表单验证失败: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{getattr(form, field).label.text}: {error}", 'danger')
     
     # 添加响应头防止缓存
     response = make_response(render_template('login.html', form=form))
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    logger.debug("返回登录页面响应")
     return response
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -425,7 +458,7 @@ def batch_operation(operation_type):
         
         price_dict[vegetable] = PriceInfo()
     
-    return render_template('batch_operation.html', type=operation_type, price_dict=price_dict, now=datetime.now())
+    return render_template('batch_operation.html', operation_type=operation_type, price_dict=price_dict, now=datetime.now())
 
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 @login_required
