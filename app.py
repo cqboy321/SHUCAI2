@@ -403,10 +403,24 @@ def batch_operation(operation_type):
             type='purchase'
         ).order_by(Product.date.desc()).first()
         
+        purchase_price = latest_purchase.price if latest_purchase else 0
+        
+        # 获取当前销售价格
+        now = datetime.now()
+        price_record = ProductPrice.query.filter(
+            ProductPrice.name == vegetable,
+            ProductPrice.start_date <= now,
+            (ProductPrice.end_date == None) | (ProductPrice.end_date > now)
+        ).order_by(ProductPrice.start_date.desc()).first()
+        
+        sale_price = price_record.sale_price if price_record else 0
+        
         # Create a dynamic class for price info
         PriceInfo = type('PriceInfo', (), {
             'quantity': current_stock,
-            'price': latest_purchase.price if latest_purchase else 0
+            'price': purchase_price,
+            'purchase_price': purchase_price,
+            'sale_price': sale_price
         })
         
         price_dict[vegetable] = PriceInfo()
