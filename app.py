@@ -380,7 +380,35 @@ def batch_operation(type):
             flash(f'添加记录时发生错误: {str(e)}', 'danger')
             return redirect(url_for('index'))
     
-    return render_template(f'batch_{type}.html')
+    # 获取蔬菜的价格信息供表单使用
+    price_dict = {}
+    for vegetable in ['空心菜', '水白菜', '水萝卜', '油麦菜', '菜心', '塔菜', '白萝卜', '快白菜', '小白菜', '大白菜']:
+        # 获取当前库存
+        current_stock = Product.query.filter_by(
+            name=vegetable,
+            type='purchase'
+        ).with_entities(func.sum(Product.quantity)).scalar() or 0
+        
+        # 减去销售数量
+        sold_quantity = Product.query.filter_by(
+            name=vegetable,
+            type='sale'
+        ).with_entities(func.sum(Product.quantity)).scalar() or 0
+        
+        current_stock -= sold_quantity
+        
+        # 获取最近一次进货记录的价格
+        latest_purchase = Product.query.filter_by(
+            name=vegetable,
+            type='purchase'
+        ).order_by(Product.date.desc()).first()
+        
+        price_dict[vegetable] = type('PriceInfo', (), {
+            'quantity': current_stock,
+            'price': latest_purchase.price if latest_purchase else 0
+        })
+    
+    return render_template('batch_operation.html', type=type, price_dict=price_dict, now=datetime.now())
 
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 @login_required
