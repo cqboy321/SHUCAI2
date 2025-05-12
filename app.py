@@ -280,10 +280,10 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/batch/<type>', methods=['GET', 'POST'])
+@app.route('/batch/<operation_type>', methods=['GET', 'POST'])
 @login_required
-def batch_operation(type):
-    if type not in ['purchase', 'sale', 'inventory_check']:
+def batch_operation(operation_type):
+    if operation_type not in ['purchase', 'sale', 'inventory_check']:
         return redirect(url_for('index'))
     
     if request.method == 'POST':
@@ -314,14 +314,14 @@ def batch_operation(type):
                         
                     total_items += 1
                     
-                    if type == 'sale':
+                    if operation_type == 'sale':
                         # 获取预设价格
                         price_record = ProductPrice.query.filter_by(name=vegetable).first()
                         if not price_record:
                             flash(f'商品 {vegetable} 没有设置价格，请联系管理员', 'danger')
                             return redirect(url_for('index'))
                         price = price_record.sale_price
-                    elif type == 'purchase':
+                    elif operation_type == 'purchase':
                         price = float(request.form.get(f'price_{vegetable}', 0))
                         if price <= 0:
                             flash(f'商品 {vegetable} 的价格必须大于0', 'danger')
@@ -332,10 +332,10 @@ def batch_operation(type):
                         loss_quantity = quantity - actual_quantity  # 计算损耗数量
                         items_details.append(f"{vegetable}: 系统记录 {quantity}，实际盘点 {actual_quantity}，损耗 {loss_quantity}")
                     
-                    if type == 'inventory_check':
+                    if operation_type == 'inventory_check':
                         product = Product(
                             name=vegetable,
-                            type=type,
+                            type=operation_type,
                             price=price,
                             quantity=quantity,
                             actual_quantity=actual_quantity,
@@ -347,7 +347,7 @@ def batch_operation(type):
                     else:
                         product = Product(
                             name=vegetable,
-                            type=type,
+                            type=operation_type,
                             price=price,
                             quantity=quantity,
                             notes=notes
@@ -363,7 +363,7 @@ def batch_operation(type):
             
             if total_items == 0:
                 flash('请至少添加一项商品', 'warning')
-                return redirect(url_for('batch_operation', type=type))
+                return redirect(url_for('batch_operation', operation_type=operation_type))
             
             db.session.commit()
             
@@ -373,8 +373,8 @@ def batch_operation(type):
                 'inventory_check': '盘点'
             }
             
-            log_activity(current_user.id, action_type[type], '; '.join(items_details))
-            flash(f'{action_type[type]}记录已添加', 'success')
+            log_activity(current_user.id, action_type[operation_type], '; '.join(items_details))
+            flash(f'{action_type[operation_type]}记录已添加', 'success')
             return redirect(url_for('index'))
         except Exception as e:
             flash(f'添加记录时发生错误: {str(e)}', 'danger')
@@ -403,12 +403,15 @@ def batch_operation(type):
             type='purchase'
         ).order_by(Product.date.desc()).first()
         
-        price_dict[vegetable] = type('PriceInfo', (), {
+        # Create a dynamic class for price info
+        PriceInfo = type('PriceInfo', (), {
             'quantity': current_stock,
             'price': latest_purchase.price if latest_purchase else 0
         })
+        
+        price_dict[vegetable] = PriceInfo()
     
-    return render_template('batch_operation.html', type=type, price_dict=price_dict, now=datetime.now())
+    return render_template('batch_operation.html', type=operation_type, price_dict=price_dict, now=datetime.now())
 
 @app.route('/update/<int:id>', methods=['GET', 'POST'])
 @login_required
